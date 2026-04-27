@@ -787,9 +787,6 @@ const getAuthTemplate = async (compiledApp, input) => {
   if (authType === 'digest') {
     return { supported: false, reason: 'digest', authType };
   }
-  // if (authType === 'oauth1') {
-  //   return { supported: false, reason: 'oauth1', authType };
-  // }
 
   const placeholderAuthData = buildPlaceholderAuthData(auth);
   let beforeRequestTemplate;
