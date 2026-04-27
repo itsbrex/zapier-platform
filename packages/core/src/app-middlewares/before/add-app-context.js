@@ -4,7 +4,7 @@ const _ = require('lodash');
 
 // remove sensitive data from bundle before logging
 const logSafeBundle = (bundle) => {
-  return _.omit(bundle, 'authData');
+  return _.omit(bundle, ['authData', 'platformData']);
 };
 
 /*
