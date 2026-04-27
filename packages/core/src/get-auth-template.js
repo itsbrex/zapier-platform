@@ -33,6 +33,12 @@ const hasAuthPlaceholders = (obj) => {
 // should have survived.
 // Build a supported:true result, but check if auth fields were consumed
 // by encoding (e.g., base64). If so, override to supported:false.
+//
+// We only flag as consumed when the developer *explicitly declared*
+// auth.fields. Implicit standard fields (basic's username/password,
+// oauth2's access_token, etc.) aren't a strong "I expect this in the
+// request" signal — apps may use process.env exclusively and never
+// reference standard fields, which would be a false positive here.
 const supportedResult = (authType, source, template, auth) => {
   if (template && Object.keys(template).length > 0) {
     const s = JSON.stringify(template);
@@ -117,6 +123,19 @@ const buildPlaceholderAuthData = (auth) => {
       authData.refresh_token =
         authData.refresh_token || '{{bundle.authData.refresh_token}}';
     }
+  }
+  if (auth.type === 'oauth1') {
+    authData.oauth_token =
+      authData.oauth_token || '{{bundle.authData.oauth_token}}';
+    authData.oauth_token_secret =
+      authData.oauth_token_secret || '{{bundle.authData.oauth_token_secret}}';
+  }
+  if (
+    auth.type === 'custom' &&
+    auth.customConfig &&
+    auth.customConfig.sendCode != null
+  ) {
+    authData.code = authData.code || '{{bundle.authData.code}}';
   }
   // Session auth has no standard fields — all fields are user-declared.
   // Special case: some session auth apps store their token under
@@ -783,7 +802,9 @@ const getAuthTemplate = async (compiledApp, input) => {
     return { supported: true, authType: null, source: 'none', template: {} };
   }
 
-  // Digest and OAuth1 can't be expressed as static templates
+  // Digest can't be expressed as a static template (per-request nonce).
+  // OAuth1 falls through — OAuth1 apps can implement a simplified static
+  // template (e.g., Trello).
   if (authType === 'digest') {
     return { supported: false, reason: 'digest', authType };
   }
