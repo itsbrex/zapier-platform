@@ -4,8 +4,8 @@ const schemaTools = require('./tools/schema');
 
 const execute = require('./execute');
 const executeRequest = require('./execute-request');
-const getAuthTemplate = require('./get-auth-template');
-const renderAuthTemplate = require('./render-auth-template');
+const getAuthTemplate = require('./auth-template/get-auth-template');
+const renderAuthTemplate = require('./auth-template/render-auth-template');
 const { handleError } = require('./errors');
 
 const commandHandlers = {

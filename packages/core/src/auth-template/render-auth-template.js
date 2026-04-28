@@ -1,17 +1,18 @@
 'use strict';
 
-const applyMiddleware = require('./middleware');
-const ensureArray = require('./tools/ensure-array');
+const applyMiddleware = require('../middleware');
+const ensureArray = require('../tools/ensure-array');
 
 // before middlewares
-const addBasicAuthHeader = require('./http-middlewares/before/add-basic-auth-header');
-const addQueryParams = require('./http-middlewares/before/add-query-params');
-const createInjectInputMiddleware = require('./http-middlewares/before/inject-input');
-const prepareRequest = require('./http-middlewares/before/prepare-request');
-const oauth1SignRequest = require('./http-middlewares/before/oauth1-sign-request');
-const sanitizeHeaders = require('./http-middlewares/before/sanatize-headers');
+const addBasicAuthHeader = require('../http-middlewares/before/add-basic-auth-header');
+const addQueryParams = require('../http-middlewares/before/add-query-params');
+const createInjectInputMiddleware = require('../http-middlewares/before/inject-input');
+const prepareRequest = require('../http-middlewares/before/prepare-request');
+const oauth1SignRequest = require('../http-middlewares/before/oauth1-sign-request');
+const sanitizeHeaders = require('../http-middlewares/before/sanatize-headers');
 
-const { REPLACE_CURLIES } = require('./constants');
+const { REPLACE_CURLIES } = require('../constants');
+const { withHttpCapture } = require('./http-capture');
 
 /**
  * Extracts auth-contributed fields from the captured request by diffing
@@ -156,7 +157,7 @@ const renderAuthTemplate = async (compiledApp, input) => {
 
   const stubZ = {
     console: { log: () => {}, error: () => {}, warn: () => {} },
-    errors: require('./errors'),
+    errors: require('../errors'),
     JSON: { parse: JSON.parse, stringify: JSON.stringify },
     request: async () => ({
       status: 200,
@@ -216,6 +217,74 @@ const renderAuthTemplate = async (compiledApp, input) => {
     const rendered = renderFromTest(auth.test, bundle.authData);
     if (Object.keys(rendered).length > 0) {
       return { authType, template: rendered };
+    }
+  }
+
+  // Inline auth + auth.test is a function: the pipeline can't see the
+  // auth pattern because it lives inside operation.perform / auth.test
+  // request configs. Invoke the test function with real authData,
+  // capturing the prepared request via z.request and falling back to
+  // raw http/fetch interception.
+  if (
+    !hasRequestTemplate &&
+    Object.keys(template).length === 0 &&
+    typeof auth.test === 'function'
+  ) {
+    let testCapturedReq = null;
+    const testCapture = (preparedReq) => {
+      if (!testCapturedReq) {
+        testCapturedReq = preparedReq;
+      }
+      return Promise.resolve({
+        status: 200,
+        headers: {},
+        getHeader: () => undefined,
+        content: '{}',
+        data: {},
+        request: preparedReq,
+      });
+    };
+
+    const testClient = applyMiddleware(httpBefores, [], testCapture, {
+      skipEnvelope: true,
+      extraArgs: [stubZ, bundle],
+    });
+
+    const testStubZ = {
+      ...stubZ,
+      request: async (reqOrUrl) => {
+        const req =
+          typeof reqOrUrl === 'string' ? { url: reqOrUrl } : { ...reqOrUrl };
+        const response = await testClient({
+          ...req,
+          method: req.method || 'GET',
+          headers: req.headers || {},
+          params: req.params || {},
+          merge: true,
+          [REPLACE_CURLIES]: true,
+        });
+        return { ...response, throwForStatus: () => {}, json: {} };
+      },
+    };
+
+    const onRawHttp = (httpReq) => {
+      if (!testCapturedReq) {
+        testCapturedReq = httpReq;
+      }
+    };
+
+    try {
+      await withHttpCapture(onRawHttp, () => auth.test(testStubZ, bundle));
+    } catch (_err) {
+      // testFn may crash parsing the stub response — continue with
+      // whatever was captured before the crash.
+    }
+
+    if (testCapturedReq) {
+      const inlineTemplate = extractTemplate(testCapturedReq);
+      if (Object.keys(inlineTemplate).length > 0) {
+        return { authType, template: inlineTemplate };
+      }
     }
   }
 
