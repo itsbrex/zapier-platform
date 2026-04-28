@@ -159,16 +159,47 @@ const renderAuthTemplate = async (compiledApp, input) => {
     });
   };
 
+  // Real z.request that hits the network. We have real authData here, so
+  // beforeRequest that sends a request (e.g., refresh-token) and uses the
+  // response in subsequent requests can produce the correct rendered template.
+  // Goes directly to fetch instead of recursing through our middleware
+  // pipeline — that would re-invoke beforeRequest for every sub-request and
+  // likely loop. Real refresh-token-style middlewares call separate endpoints
+  // that don't need the same auth applied.
+  const realRequest = async (reqOrUrl) => {
+    const req =
+      typeof reqOrUrl === 'string' ? { url: reqOrUrl } : { ...reqOrUrl };
+    const response = await fetch(req.url, {
+      method: req.method || 'GET',
+      headers: req.headers,
+      body: req.body,
+    });
+    const content = await response.text();
+    let data = {};
+    try {
+      data = JSON.parse(content);
+    } catch {
+      // response is not JSON — leave data empty
+    }
+    return {
+      status: response.status,
+      headers: Object.fromEntries(response.headers.entries()),
+      getHeader: (name) => response.headers.get(name),
+      content,
+      data,
+      throwForStatus: () => {
+        if (response.status >= 400) {
+          throw new Error(`Got ${response.status} ${response.statusText}`);
+        }
+      },
+    };
+  };
+
   const stubZ = {
     console: { log: () => {}, error: () => {}, warn: () => {} },
     errors: require('../errors'),
     JSON: { parse: JSON.parse, stringify: JSON.stringify },
-    request: async () => ({
-      status: 200,
-      headers: {},
-      data: {},
-      content: '{}',
-    }),
+    request: realRequest,
   };
 
   const client = applyMiddleware(httpBefores, [], captureFunction, {
