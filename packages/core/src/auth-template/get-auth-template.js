@@ -545,6 +545,20 @@ const runMiddlewareSurvival = async (
 
   httpBefores.push(...ensureArray(compiledApp.beforeRequest));
 
+  // After the app's beforeRequest runs, unwrap any urlProbe back to a plain
+  // string. The probe's overridden comparison methods are intended to perturb
+  // the app's beforeRequest only — leaving them in place perturbs downstream
+  // core middlewares too (e.g., addQueryParams checks `url.includes('?')` to
+  // pick its separator), which produces false-positive URL divergence.
+  if (urlProbe) {
+    httpBefores.push((req) => {
+      if (req.url && typeof req.url !== 'string') {
+        req.url = String(req.url);
+      }
+      return req;
+    });
+  }
+
   if (auth.type === 'basic') {
     httpBefores.push(addBasicAuthHeader);
   }
@@ -725,15 +739,24 @@ const getAuthTemplate = async (compiledApp, input) => {
   let beforeRequestTemplate;
   let beforeRequestFailed = false;
 
-  // --- Step 1: requestTemplate ---
-  // If the app declares a requestTemplate, that IS the auth template.
-  // No need to run middleware — requestTemplate is merged into every request.
+  const beforeRequest = ensureArray(compiledApp.beforeRequest);
+
+  // --- Step 1: requestTemplate (only when there's no beforeRequest) ---
+  // If the app declares a requestTemplate AND has no beforeRequest, that IS
+  // the auth template — return it directly without running middleware.
+  // When beforeRequest also exists, fall through to Step 2: prepareRequest
+  // merges requestTemplate into the captured request, so the pipeline sees
+  // the union of both contributions.
   const requestTemplate = compiledApp.requestTemplate;
-  if (requestTemplate && Object.keys(requestTemplate).length > 0) {
+  if (
+    beforeRequest.length === 0 &&
+    requestTemplate &&
+    Object.keys(requestTemplate).length > 0
+  ) {
     const cleaned = cleanTemplate(requestTemplate);
     // Return requestTemplate if it has auth placeholders or auth-like
     // header names. Skip if it only has non-auth headers (Accept,
-    // Content-Type, User-Agent) — auth may come from beforeRequest.
+    // Content-Type, User-Agent) — auth may come from authentication.test.
     const hasAuthContent =
       hasAuthPlaceholders(cleaned) ||
       (cleaned.headers &&
@@ -756,7 +779,6 @@ const getAuthTemplate = async (compiledApp, input) => {
   // --- Step 2: beforeRequest middleware ---
   // Run placeholder authData through the beforeRequest pipeline directly.
   // This captures auth injected by middleware (most common pattern).
-  const beforeRequest = ensureArray(compiledApp.beforeRequest);
   if (beforeRequest.length > 0) {
     const { template, error } = await runMiddlewareSurvival(
       compiledApp,
@@ -953,12 +975,26 @@ const getAuthTemplate = async (compiledApp, input) => {
         return { supported: false, reason: 'middleware_not_static', authType };
       }
 
-      // Merge back any params from the test object that were stripped
-      // by core's normalizeEmptyParamFields (which removes curlies from
-      // param values). The test object's params are static definitions.
+      // Merge back any auth-relevant params from the test object that were
+      // stripped by core's normalizeEmptyParamFields (which removes curlies
+      // from param values). Only include params whose values contain auth
+      // placeholders — non-placeholder literals (e.g., test-specific markers
+      // like `from_zapier: 'true'`) are not part of the auth template.
       const finalTemplate = cleanTemplate(template);
       if (testReq.params && Object.keys(testReq.params).length > 0) {
-        finalTemplate.params = { ...finalTemplate.params, ...testReq.params };
+        const authParams = {};
+        for (const [k, v] of Object.entries(testReq.params)) {
+          if (
+            typeof v === 'string' &&
+            (/\{\{\s*bundle\.authData\./.test(v) ||
+              /\{\{\s*process\.env\./.test(v))
+          ) {
+            authParams[k] = v;
+          }
+        }
+        if (Object.keys(authParams).length > 0) {
+          finalTemplate.params = { ...finalTemplate.params, ...authParams };
+        }
       }
 
       return supportedResult(
