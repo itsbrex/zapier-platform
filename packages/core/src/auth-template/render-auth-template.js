@@ -122,11 +122,15 @@ const renderAuthTemplate = async (compiledApp, input) => {
     },
   };
 
+  // beforeRequest can be either a single function or an array; normalize
+  // once and reuse below. (Function.length is the arity, not "is defined".)
+  const beforeRequest = ensureArray(compiledApp.beforeRequest);
+
   // Build the same before-middleware chain as createAppRequestClient
   const httpBefores = [
     createInjectInputMiddleware(safeInput),
     prepareRequest,
-    ...ensureArray(compiledApp.beforeRequest),
+    ...beforeRequest,
   ];
 
   if (authType === 'basic') {
@@ -200,9 +204,7 @@ const renderAuthTemplate = async (compiledApp, input) => {
 
   // Inline auth fallback: if pipeline produced an empty template and
   // there's no middleware/requestTemplate, render from authentication.test
-  const hasBeforeRequest =
-    Array.isArray(compiledApp.beforeRequest) &&
-    compiledApp.beforeRequest.length > 0;
+  const hasBeforeRequest = beforeRequest.length > 0;
   const hasRequestTemplate =
     compiledApp.requestTemplate &&
     Object.keys(compiledApp.requestTemplate).length > 0;

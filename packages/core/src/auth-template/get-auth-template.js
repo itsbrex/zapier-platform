@@ -944,7 +944,7 @@ const getAuthTemplate = async (compiledApp, input) => {
       // URL divergence check — only when there's beforeRequest middleware
       // that could branch on URL. Skip if no beforeRequest (the test
       // object's own URL/params are static by definition).
-      const hasBR = ensureArray(compiledApp.beforeRequest).length > 0;
+      const hasBR = beforeRequest.length > 0;
       const urlProbeTrue = createUrlProbe(
         testReq.url || 'https://example.com',
         true,
