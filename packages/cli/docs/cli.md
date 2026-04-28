@@ -340,7 +340,7 @@ This command also checks the current directory for a linked integration.
 
 > Invoke an authentication method, a trigger, or a create/search action locally or remotely.
 
-**Usage**: `zapier invoke [ACTIONTYPE] [ACTIONKEY]`
+**Usage**: `zapier invoke [ACTIONTYPE] [ACTIONKEY] [AUTHDATA]`
 
 This command allows you to invoke your integration's authentication, triggers, and actions. With this tool, you can test and debug your integration code directly from your terminal without leaving your development environment and opening a browser.
 
@@ -447,6 +447,7 @@ The following is a non-exhaustive list of current limitations in local and relay
 **Arguments**
 * `actionType` | The action type you want to invoke.
 * `actionKey` | The trigger/action key you want to invoke. If ACTIONTYPE is "auth", this can be "label", "refresh", "start", or "test".
+* `authData` | Only used by `auth render`. JSON-encoded object with auth field values (e.g. `'{"access_token":"a_token"}'`). Values here take precedence over the .env file.
 
 **Flags**
 * `-i, --inputData` | The input data to pass to the action. Must be a JSON-encoded object. The data can be passed from the command directly like '{"key": "value"}', read from a file like @file.json, or read from stdin like @-.
@@ -480,6 +481,7 @@ The following is a non-exhaustive list of current limitations in local and relay
 * `zapier-platform invoke trigger new_recipe --remote`
 * `zapier-platform invoke trigger new_recipe -r -a 12345`
 * `zapier-platform invoke -r -v 2.0.0 -a -`
+* `zapier-platform invoke auth render '{"access_token":"a_token"}'`
 
 
 ## jobs

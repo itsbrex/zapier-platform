@@ -212,6 +212,31 @@ class InvokeCommand extends BaseCommand {
     // gives the developer an option to override the values in bundle.authData.
     context.authData = { ...context.authData, ...loadAuthDataFromEnv() };
 
+    // `auth render` accepts a positional JSON-encoded authData arg whose
+    // values take precedence over .env. Useful for one-off rendering
+    // without touching the .env file.
+    if (this.args.authData) {
+      if (context.actionType !== 'auth' || context.actionKey !== 'render') {
+        throw new Error(
+          'The authData positional argument is only supported by `auth render`.',
+        );
+      }
+      let parsed;
+      try {
+        parsed = JSON.parse(this.args.authData);
+      } catch (err) {
+        throw new Error(`Failed to parse authData as JSON: ${err.message}`);
+      }
+      if (
+        parsed === null ||
+        typeof parsed !== 'object' ||
+        Array.isArray(parsed)
+      ) {
+        throw new Error('authData must be a JSON object.');
+      }
+      context.authData = { ...context.authData, ...parsed };
+    }
+
     if (context.actionType === 'auth') {
       switch (context.actionKey) {
         case 'start': {
@@ -408,6 +433,10 @@ InvokeCommand.args = {
     description:
       'The trigger/action key you want to invoke. If ACTIONTYPE is "auth", this can be "label", "refresh", "start", or "test".',
   }),
+  authData: Args.string({
+    description:
+      'Only used by `auth render`. JSON-encoded object with auth field values (e.g. `\'{"access_token":"a_token"}\'`). Values here take precedence over the .env file.',
+  }),
 };
 
 InvokeCommand.examples = [
@@ -425,6 +454,7 @@ InvokeCommand.examples = [
   'zapier-platform invoke trigger new_recipe --remote',
   'zapier-platform invoke trigger new_recipe -r -a 12345',
   'zapier-platform invoke -r -v 2.0.0 -a -',
+  `zapier-platform invoke auth render '{"access_token":"a_token"}'`,
 ];
 InvokeCommand.description = `Invoke an authentication method, a trigger, or a create/search action locally or remotely.
 
