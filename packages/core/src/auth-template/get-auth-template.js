@@ -756,7 +756,8 @@ const getAuthTemplate = async (compiledApp, input) => {
     const cleaned = cleanTemplate(requestTemplate);
     // Return requestTemplate if it has auth placeholders or auth-like
     // header names. Skip if it only has non-auth headers (Accept,
-    // Content-Type, User-Agent) — auth may come from authentication.test.
+    // Content-Type, User-Agent) — auth may come from beforeRequest or
+    // authentication.test.
     const hasAuthContent =
       hasAuthPlaceholders(cleaned) ||
       (cleaned.headers &&
