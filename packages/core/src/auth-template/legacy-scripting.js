@@ -75,16 +75,22 @@ const createLegacyBeforeRequest = (app) => {
         }
       }
     } else if (authType === 'basic' || authType === 'digest') {
-      const username = renderLegacyTemplate(
-        authMapping.username || '',
-        authData,
-      );
-      const password = renderLegacyTemplate(
-        authMapping.password || '',
-        authData,
-      );
-      bundle.authData.username = username;
-      bundle.authData.password = password;
+      // Only override username/password when the legacy authMapping
+      // explicitly defines them. Otherwise preserve the values the user
+      // already provided so addBasicAuthHeader (later in the pipeline)
+      // can use them.
+      if (authMapping.username) {
+        bundle.authData.username = renderLegacyTemplate(
+          authMapping.username,
+          authData,
+        );
+      }
+      if (authMapping.password) {
+        bundle.authData.password = renderLegacyTemplate(
+          authMapping.password,
+          authData,
+        );
+      }
     }
 
     return req;

@@ -349,6 +349,59 @@ describe('renderAuthTemplate', () => {
     });
   });
 
+  describe('legacy scripting bridge', () => {
+    it('handles beforeRequest that delegates to z.legacyScripting.beforeRequest', async () => {
+      // Apps converted from legacy Web Builder define a beforeRequest that
+      // forwards to `z.legacyScripting.beforeRequest`. Render's stubZ must
+      // provide a legacyScripting bridge that applies the legacy auth
+      // mapping; otherwise the call throws "Cannot read properties of
+      // undefined (reading 'beforeRequest')".
+      const beforeRequest = async (request, z, bundle) => {
+        return z.legacyScripting.beforeRequest(request, z, bundle);
+      };
+      const result = await run(
+        {
+          authentication: {
+            type: 'custom',
+            fields: [{ key: 'api_key' }, { key: 'api_url' }],
+          },
+          legacy: {
+            authentication: {
+              placement: 'header',
+              mapping: { 'X-Api-Key': '{{api_key}}' },
+            },
+          },
+          beforeRequest: [beforeRequest],
+        },
+        { api_key: 'real-key', api_url: 'https://example.com' },
+      );
+      result.authType.should.eql('custom');
+      result.template.headers['X-Api-Key'].should.eql('real-key');
+    });
+
+    it('renders basic auth correctly even when beforeRequest delegates to legacyScripting', async () => {
+      // Legacy basic-auth apps: addBasicAuthHeader sets the Authorization
+      // header before the user's BR runs. The legacy BR is then a no-op
+      // for auth purposes, but it must not crash the pipeline.
+      const beforeRequest = async (request, z, bundle) => {
+        return z.legacyScripting.beforeRequest(request, z, bundle);
+      };
+      const result = await run(
+        {
+          authentication: {
+            type: 'basic',
+            fields: [{ key: 'username' }, { key: 'password' }],
+          },
+          beforeRequest: [beforeRequest],
+        },
+        { username: 'alice', password: 's3cret' },
+      );
+      const expected =
+        'Basic ' + Buffer.from('alice:s3cret').toString('base64');
+      result.template.headers.Authorization.should.eql(expected);
+    });
+  });
+
   describe('beforeRequest with z.request (real network call)', () => {
     let origFetch;
     beforeEach(() => {
