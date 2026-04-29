@@ -748,6 +748,15 @@ const getAuthTemplate = async (compiledApp, input) => {
     return { supported: false, reason: 'digest', authType };
   }
 
+  // Basic auth always runs through addBasicAuthHeader, which base64-encodes
+  // username:password. The encoding consumes the placeholder strings, so no
+  // {{bundle.authData.X}} survives in the captured request. Our template
+  // format has no way to express "base64-encode these fields at render
+  // time," so basic auth is fundamentally unsupportable here.
+  if (authType === 'basic') {
+    return { supported: false, reason: 'basic', authType };
+  }
+
   const placeholderAuthData = buildPlaceholderAuthData(auth);
   let beforeRequestTemplate;
   let beforeRequestFailed = false;
