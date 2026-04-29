@@ -201,23 +201,36 @@ const templatesEqual = (a, b) =>
   JSON.stringify(cleanTemplate(a)) === JSON.stringify(cleanTemplate(b));
 
 // Run fn with process.env proxied to return placeholders for unknown vars.
+// Concurrent withProxiedEnv calls (e.g., parallel URL probe runs) must
+// share the same proxy — naive "save current; restore current" would let
+// the inner call save the outer's Proxy and "restore" to it, leaking the
+// Proxy past the outermost finally.
+let envProxyDepth = 0;
+let realOrigEnv = null;
 const withProxiedEnv = async (fn) => {
-  const origEnv = process.env;
-  process.env = new Proxy(origEnv, {
-    get(target, prop) {
-      if (prop in target) {
-        return target[prop];
-      }
-      if (typeof prop === 'symbol') {
-        return undefined;
-      }
-      return `{{process.env.${prop}}}`;
-    },
-  });
+  if (envProxyDepth === 0) {
+    realOrigEnv = process.env;
+    process.env = new Proxy(realOrigEnv, {
+      get(target, prop) {
+        if (prop in target) {
+          return target[prop];
+        }
+        if (typeof prop === 'symbol') {
+          return undefined;
+        }
+        return `{{process.env.${prop}}}`;
+      },
+    });
+  }
+  envProxyDepth++;
   try {
     return await fn();
   } finally {
-    process.env = origEnv;
+    envProxyDepth--;
+    if (envProxyDepth === 0) {
+      process.env = realOrigEnv;
+      realOrigEnv = null;
+    }
   }
 };
 

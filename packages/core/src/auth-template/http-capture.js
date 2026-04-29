@@ -11,13 +11,58 @@ const { EventEmitter } = require('events');
 // (success or error). Used by both getAuthTemplate (placeholder authData)
 // and renderAuthTemplate (real authData) when invoking authentication.test
 // as a function.
+//
+// Concurrent withHttpCapture calls share a single set of patches so the
+// inner call doesn't capture the outer's patched function as its
+// "original" — the depth counter only restores on the outermost finally.
+let captureDepth = 0;
+let savedHttpRequest = null;
+let savedHttpsRequest = null;
+let savedHttpGet = null;
+let savedHttpsGet = null;
+let savedFetch = null;
+const onRequestStack = [];
 const withHttpCapture = async (onRequest, fn) => {
-  const origHttpRequest = http.request;
-  const origHttpsRequest = https.request;
-  const origHttpGet = http.get;
-  const origHttpsGet = https.get;
-  const origFetch = globalThis.fetch;
+  onRequestStack.push(onRequest);
+  if (captureDepth === 0) {
+    savedHttpRequest = http.request;
+    savedHttpsRequest = https.request;
+    savedHttpGet = http.get;
+    savedHttpsGet = https.get;
+    savedFetch = globalThis.fetch;
+    installPatches();
+  }
+  captureDepth++;
+  try {
+    return await fn();
+  } finally {
+    captureDepth--;
+    onRequestStack.pop();
+    if (captureDepth === 0) {
+      http.request = savedHttpRequest;
+      https.request = savedHttpsRequest;
+      http.get = savedHttpGet;
+      https.get = savedHttpsGet;
+      globalThis.fetch = savedFetch;
+      savedHttpRequest =
+        savedHttpsRequest =
+        savedHttpGet =
+        savedHttpsGet =
+        savedFetch =
+          null;
+    }
+  }
+};
 
+const notifyAll = (info) => {
+  // Notify every nested capture in stack order so each caller's onRequest
+  // sees the same intercepted request.
+  for (const cb of onRequestStack) {
+    cb(info);
+  }
+};
+
+const installPatches = () => {
   const patchedRequest = (origFn, protocol) =>
     function patchedReq(...args) {
       // args can be (url, options, cb), (options, cb), or (url, cb)
@@ -37,7 +82,7 @@ const withHttpCapture = async (onRequest, fn) => {
         options = args[0] || {};
       }
 
-      onRequest({
+      notifyAll({
         url:
           options.url ||
           `${protocol}://${options.host || options.hostname || 'localhost'}${options.path || '/'}`,
@@ -73,15 +118,15 @@ const withHttpCapture = async (onRequest, fn) => {
       return fakeReq;
     };
 
-  http.request = patchedRequest(origHttpRequest, 'http');
-  https.request = patchedRequest(origHttpsRequest, 'https');
-  http.get = patchedRequest(origHttpGet, 'http');
-  https.get = patchedRequest(origHttpsGet, 'https');
+  http.request = patchedRequest(savedHttpRequest, 'http');
+  https.request = patchedRequest(savedHttpsRequest, 'https');
+  http.get = patchedRequest(savedHttpGet, 'http');
+  https.get = patchedRequest(savedHttpsGet, 'https');
 
   globalThis.fetch = async (input, init) => {
     const url = typeof input === 'string' ? input : input?.url || '';
     const headers = init?.headers || input?.headers || {};
-    onRequest({
+    notifyAll({
       url,
       headers:
         headers instanceof Headers
@@ -91,16 +136,6 @@ const withHttpCapture = async (onRequest, fn) => {
     });
     return new Response('{}', { status: 200, headers: {} });
   };
-
-  try {
-    return await fn();
-  } finally {
-    http.request = origHttpRequest;
-    https.request = origHttpsRequest;
-    http.get = origHttpGet;
-    https.get = origHttpsGet;
-    globalThis.fetch = origFetch;
-  }
 };
 
 module.exports = { withHttpCapture };
