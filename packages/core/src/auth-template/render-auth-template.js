@@ -13,6 +13,7 @@ const sanitizeHeaders = require('../http-middlewares/before/sanatize-headers');
 
 const { REPLACE_CURLIES } = require('../constants');
 const { withHttpCapture } = require('./http-capture');
+const { buildLegacyScripting } = require('./legacy-scripting');
 
 /**
  * Extracts auth-contributed fields from the captured request by diffing
@@ -201,6 +202,11 @@ const renderAuthTemplate = async (compiledApp, input) => {
     JSON: { parse: JSON.parse, stringify: JSON.stringify },
     request: realRequest,
   };
+  // Apps whose `beforeRequest` calls `z.legacyScripting.beforeRequest(...)`
+  // need this stub. It applies the same auth-mapping logic getAuthTemplate
+  // uses; for legacy basic-auth apps the Authorization header has already
+  // been added by addBasicAuthHeader, so this is effectively a no-op there.
+  stubZ.legacyScripting = buildLegacyScripting(compiledApp, realRequest);
 
   const client = applyMiddleware(httpBefores, [], captureFunction, {
     skipEnvelope: true,

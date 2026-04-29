@@ -12,9 +12,8 @@ const sanitizeHeaders = require('../http-middlewares/before/sanatize-headers');
 
 const { REPLACE_CURLIES } = require('../constants');
 const { withHttpCapture } = require('./http-capture');
+const { buildLegacyScripting, loadLegacyZap } = require('./legacy-scripting');
 
-const vm = require('vm');
-const lodash = require('lodash');
 const errors = require('../errors');
 
 // --- Helpers ---
@@ -328,212 +327,27 @@ const extractTemplate = (req) => {
   return template;
 };
 
-// --- Legacy scripting auth support ---
-// Minimal reimplementation of the legacy scripting runner's beforeRequest
-// middleware, just enough to inject auth fields into headers/params.
-// Adapted from zapier-platform-legacy-scripting-runner/middleware-factory.js.
-
-const renderLegacyTemplate = (templateString, context) => {
-  if (typeof templateString !== 'string') {
-    return templateString;
-  }
-  return templateString.replace(/\{\{([^}]+)\}\}/g, (_, key) => {
-    const trimmed = key.trim();
-    return trimmed in context ? context[trimmed] : '';
-  });
-};
-
-const renderAuthMapping = (authMapping, authData) => {
-  if (!authMapping || Object.keys(authMapping).length === 0) {
-    return authData;
-  }
-  const result = {};
-  for (const [k, v] of Object.entries(authMapping)) {
-    result[k] = renderLegacyTemplate(v, authData);
-  }
-  return result;
-};
-
-const createLegacyBeforeRequest = (app) => {
-  const authType = app.authentication && app.authentication.type;
-  const legacy = app.legacy || {};
-  const authMapping =
-    (legacy.authentication && legacy.authentication.mapping) || {};
-  const placement =
-    (legacy.authentication && legacy.authentication.placement) || 'header';
-
-  return (req, z, bundle) => {
-    const authData = bundle.authData || {};
-    if (!authData || Object.keys(authData).length === 0) {
-      return req;
-    }
-
-    if (authType === 'oauth2') {
-      if (authData.access_token) {
-        if (placement === 'header' || placement === 'both') {
-          req.headers.Authorization =
-            req.headers.Authorization || `Bearer ${authData.access_token}`;
-        }
-        if (placement === 'querystring' || placement === 'both') {
-          req.params = req.params || {};
-          req.params.access_token =
-            req.params.access_token || authData.access_token;
-        }
-      }
-    } else if (authType === 'session' || authType === 'custom') {
-      const rendered = renderAuthMapping(authMapping, authData);
-      if (placement === 'header' || placement === 'both') {
-        const lowerHeaders = {};
-        for (const [k, v] of Object.entries(req.headers)) {
-          lowerHeaders[k.toLowerCase()] = v;
-        }
-        for (const [k, v] of Object.entries(rendered)) {
-          if (!lowerHeaders[k.toLowerCase()]) {
-            req.headers[k] = v;
-          }
-        }
-      }
-      if (placement === 'querystring' || placement === 'both') {
-        req.params = req.params || {};
-        for (const [k, v] of Object.entries(rendered)) {
-          req.params[k] = req.params[k] || v;
-        }
-      }
-    } else if (authType === 'basic' || authType === 'digest') {
-      const username = renderLegacyTemplate(
-        authMapping.username || '',
-        authData,
-      );
-      const password = renderLegacyTemplate(
-        authMapping.password || '',
-        authData,
-      );
-      bundle.authData.username = username;
-      bundle.authData.password = password;
-    }
-
-    return req;
-  };
-};
-
-// Load the Zap object from legacy scriptingSource.
-const loadLegacyZap = (compiledApp) => {
-  const src = compiledApp.legacy && compiledApp.legacy.scriptingSource;
-  if (!src) {
-    return null;
-  }
-  const sandbox = { Zap: {}, _: lodash, z: { JSON }, $: {} };
-  try {
-    vm.runInNewContext(src, sandbox);
-  } catch {
-    return null;
-  }
-  return sandbox.Zap;
-};
-
-// Map typeOf + key to the pre-method name on the Zap object.
-const getLegacyPreMethodName = (typeOf, key) => {
-  if (!key) {
-    return null;
-  }
-  switch (typeOf) {
-    case 'trigger':
-      return `${key}_pre_poll`;
-    case 'create':
-      return `${key}_pre_write`;
-    case 'search':
-      return `${key}_pre_search`;
-    default:
-      return null;
-  }
-};
-
-// Get the operation URL from the legacy app config.
-const getLegacyOperationUrl = (compiledApp, typeOf, key) => {
-  const pluralType =
-    typeOf === 'trigger'
-      ? 'triggers'
-      : typeOf === 'create'
-        ? 'creates'
-        : typeOf === 'search'
-          ? 'searches'
-          : null;
-  if (!pluralType || !key) {
-    return '';
-  }
-  const legacy = compiledApp.legacy || {};
-  return (
-    (legacy[pluralType] &&
-      legacy[pluralType][key] &&
-      legacy[pluralType][key].operation &&
-      legacy[pluralType][key].operation.url) ||
-    ''
-  );
-};
-
 // Stub z object used for pipeline capture and test function survival.
 const createStubZ = (compiledApp, cachedZap) => {
   const Zap = cachedZap !== undefined ? cachedZap : loadLegacyZap(compiledApp);
+
+  const stubRequest = async () => ({
+    status: 200,
+    headers: {},
+    data: {},
+    content: '{}',
+  });
 
   const stubZ = {
     console: { log: () => {}, error: () => {}, warn: () => {} },
     errors,
     JSON: { parse: JSON.parse, stringify: JSON.stringify },
-    legacyScripting: {
-      beforeRequest: createLegacyBeforeRequest(compiledApp),
-      afterResponse: (response) => response,
-      run: async (bundle, typeOf, key) => {
-        // Build initial request with auth via the legacy beforeRequest
-        let request = {
-          url: getLegacyOperationUrl(compiledApp, typeOf, key),
-          headers: {
-            Accept: 'application/json',
-            'Content-Type': 'application/json; charset=utf-8',
-          },
-          params: {},
-          body: {},
-        };
-
-        // Apply legacy auth middleware (adds Bearer token, etc.)
-        const legacyBeforeRequest = createLegacyBeforeRequest(compiledApp);
-        request = legacyBeforeRequest(request, stubZ, bundle);
-
-        bundle.request = request;
-
-        // Run the pre method (e.g., Zap.newForm_pre_poll) if it exists.
-        // Wrap in try/catch — pre methods may crash on placeholder data
-        // (e.g., accessing env vars or bundle fields that don't exist).
-        // If it fails, proceed with the un-modified request.
-        if (Zap && key) {
-          const preMethodName = getLegacyPreMethodName(typeOf, key);
-          const preMethod = preMethodName ? Zap[preMethodName] : null;
-          if (preMethod) {
-            try {
-              const legacyBundle = {
-                ...bundle,
-                auth_fields: bundle.authData || {},
-                request: { ...request },
-              };
-              const modified = await preMethod(legacyBundle);
-              if (modified) {
-                request = { ...request, ...modified };
-              }
-            } catch {
-              // Pre method failed — continue with base request
-            }
-          }
-        }
-
-        // Make the stubbed HTTP request so it gets captured
-        return stubZ.request(request);
-      },
-    },
-    request: async () => ({
-      status: 200,
-      headers: {},
-      data: {},
-      content: '{}',
-    }),
+    legacyScripting: buildLegacyScripting(
+      compiledApp,
+      (req) => stubZ.request(req),
+      Zap,
+    ),
+    request: stubRequest,
   };
 
   return stubZ;
