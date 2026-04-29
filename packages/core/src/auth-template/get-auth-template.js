@@ -814,7 +814,7 @@ const getAuthTemplate = async (compiledApp, input) => {
       if (!auth.test) {
         return {
           supported: false,
-          reason: 'middleware_not_convertible',
+          reason: 'beforeRequest_error',
           authType,
           error,
         };
@@ -893,11 +893,13 @@ const getAuthTemplate = async (compiledApp, input) => {
         } // end else (proxy check passed)
       }
 
-      // No auth placeholders survived, or divergence with auth.test available.
+      // No auth placeholders survived (BR consumed them, e.g. base64
+      // encoding) — or divergence was detected and we'd fall through if
+      // auth.test were available.
       if (!auth.test) {
         return {
           supported: false,
-          reason: 'middleware_not_convertible',
+          reason: 'auth_fields_consumed',
           authType,
         };
       }
@@ -1060,7 +1062,7 @@ const getAuthTemplate = async (compiledApp, input) => {
       if (!beforeRequestTemplate) {
         return {
           supported: false,
-          reason: 'test_function_not_convertible',
+          reason: 'test_function_error',
           authType,
           error,
         };
@@ -1139,7 +1141,7 @@ const getAuthTemplate = async (compiledApp, input) => {
 
       return {
         supported: false,
-        reason: 'test_function_not_convertible',
+        reason: 'auth_fields_consumed',
         authType,
       };
     } // end else (requestMade)
