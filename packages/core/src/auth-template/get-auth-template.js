@@ -835,7 +835,7 @@ const getAuthTemplate = async (compiledApp, input) => {
           if (!auth.test) {
             return {
               supported: false,
-              reason: 'middleware_not_static',
+              reason: 'beforeRequest_not_static',
               authType,
             };
           }
@@ -879,7 +879,7 @@ const getAuthTemplate = async (compiledApp, input) => {
             if (!auth.test) {
               return {
                 supported: false,
-                reason: 'middleware_not_static',
+                reason: 'beforeRequest_not_static',
                 authType,
               };
             }
@@ -935,7 +935,7 @@ const getAuthTemplate = async (compiledApp, input) => {
     if (error) {
       return {
         supported: false,
-        reason: 'test_object_not_convertible',
+        reason: 'beforeRequest_error',
         authType,
         error,
       };
@@ -962,7 +962,11 @@ const getAuthTemplate = async (compiledApp, input) => {
       restoreStrippedParams(proxyTemplate, proxyAuthData);
 
       if (proxyError || !templatesEqual(template, proxyTemplate)) {
-        return { supported: false, reason: 'middleware_not_static', authType };
+        return {
+          supported: false,
+          reason: 'beforeRequest_not_static',
+          authType,
+        };
       }
 
       // URL divergence check — only when there's beforeRequest middleware
@@ -997,7 +1001,11 @@ const getAuthTemplate = async (compiledApp, input) => {
           urlFalseError ||
           !templatesEqual(urlTrueTemplate, urlFalseTemplate))
       ) {
-        return { supported: false, reason: 'middleware_not_static', authType };
+        return {
+          supported: false,
+          reason: 'beforeRequest_not_static',
+          authType,
+        };
       }
 
       // Merge back any auth-relevant params from the test object that were
@@ -1032,7 +1040,7 @@ const getAuthTemplate = async (compiledApp, input) => {
 
     return {
       supported: false,
-      reason: 'test_object_not_convertible',
+      reason: 'auth_fields_consumed',
       authType,
     };
   }
@@ -1051,7 +1059,7 @@ const getAuthTemplate = async (compiledApp, input) => {
       if (beforeRequestFailed) {
         return {
           supported: false,
-          reason: 'middleware_not_convertible',
+          reason: 'test_function_error',
           authType,
         };
       }
@@ -1071,7 +1079,7 @@ const getAuthTemplate = async (compiledApp, input) => {
       if (beforeRequestFailed) {
         return {
           supported: false,
-          reason: 'middleware_not_convertible',
+          reason: 'test_function_no_request',
           authType,
         };
       }

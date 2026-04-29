@@ -204,7 +204,7 @@ describe('getAuthTemplate', () => {
       );
     });
 
-    it('returns middleware_not_static when beforeRequest branches on undeclared authData', async () => {
+    it('returns beforeRequest_not_static when beforeRequest branches on undeclared authData', async () => {
       const beforeRequest = (req, z, bundle) => {
         req.headers = req.headers || {};
         if (bundle.authData.use_secondary) {
@@ -222,10 +222,10 @@ describe('getAuthTemplate', () => {
         beforeRequest: [beforeRequest],
       });
       result.supported.should.be.false();
-      result.reason.should.eql('middleware_not_static');
+      result.reason.should.eql('beforeRequest_not_static');
     });
 
-    it('returns middleware_not_static when beforeRequest branches on the URL', async () => {
+    it('returns beforeRequest_not_static when beforeRequest branches on the URL', async () => {
       const beforeRequest = (req, z, bundle) => {
         req.headers = req.headers || {};
         if (req.url.includes('/admin/')) {
@@ -243,7 +243,7 @@ describe('getAuthTemplate', () => {
         beforeRequest: [beforeRequest],
       });
       result.supported.should.be.false();
-      result.reason.should.eql('middleware_not_static');
+      result.reason.should.eql('beforeRequest_not_static');
     });
 
     it('returns beforeRequest_error when beforeRequest throws and no auth.test', async () => {
