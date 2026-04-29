@@ -93,6 +93,21 @@ const cleanTemplate = (template) => {
   return cleaned;
 };
 
+// Token-like authData keys that session-auth integrations populate at
+// runtime via `sessionConfig.perform` without declaring them in
+// `authentication.fields`. We add placeholders for these so middleware
+// reading `bundle.authData.<key>` produces a template entry.
+const SESSION_AUTH_COMMON_KEYS = [
+  'PHPSESSID',
+  'accessToken',
+  'access_token',
+  'apiToken',
+  'refresh_token',
+  'sessionKey',
+  'sessionToken',
+  'token',
+];
+
 // Build placeholder authData where each value IS its own placeholder string.
 // When prepareRequest runs curlies resolution, placeholders resolve to themselves.
 const buildPlaceholderAuthData = (auth) => {
@@ -134,19 +149,15 @@ const buildPlaceholderAuthData = (auth) => {
   ) {
     authData.code = authData.code || '{{bundle.authData.code}}';
   }
-  // Session auth has no standard fields — all fields are user-declared.
-  // Special case: some session auth apps store their token under
-  // `access_token` even though it's not a declared field (it's set by
-  // the session auth flow at runtime). Add a placeholder so middleware
-  // that checks `bundle.authData.access_token` can produce a template.
+  // Session auth has no schema-defined standard fields, but some apps
+  // stash their token under conventional undeclared names (set at
+  // runtime by the session auth flow). Add placeholders for these so
+  // middleware that reads `bundle.authData.<key>` can still produce a
+  // template.
   if (auth.type === 'session') {
-    authData.access_token =
-      authData.access_token || '{{bundle.authData.access_token}}';
-    authData.sessionKey =
-      authData.sessionKey || '{{bundle.authData.sessionKey}}';
-    authData.token = authData.token || '{{bundle.authData.token}}';
-    authData.accessToken =
-      authData.accessToken || '{{bundle.authData.accessToken}}';
+    for (const key of SESSION_AUTH_COMMON_KEYS) {
+      authData[key] = authData[key] || `{{bundle.authData.${key}}}`;
+    }
   }
 
   return authData;

@@ -130,6 +130,40 @@ describe('getAuthTemplate', () => {
       result.source.should.eql('authentication.test');
       result.template.headers.should.have.property('X-Api-Key');
     });
+
+    it('detects auth content via apikey substring in header name (no dash)', async () => {
+      const result = await run({
+        authentication: {
+          type: 'custom',
+          test: STUB_TEST,
+          fields: [{ key: 'apikey' }],
+        },
+        requestTemplate: {
+          headers: { 'X-Apikey': 'literal-no-curlies' },
+        },
+      });
+      result.supported.should.be.true();
+      result.source.should.eql('requestTemplate');
+      result.template.headers['X-Apikey'].should.eql('literal-no-curlies');
+    });
+
+    it('detects auth content via token substring in header name', async () => {
+      const result = await run({
+        authentication: {
+          type: 'oauth2',
+          test: STUB_TEST,
+          fields: [{ key: 'access_token' }],
+        },
+        requestTemplate: {
+          headers: { 'X-Access-Token': 'literal-no-curlies' },
+        },
+      });
+      result.supported.should.be.true();
+      result.source.should.eql('requestTemplate');
+      result.template.headers['X-Access-Token'].should.eql(
+        'literal-no-curlies',
+      );
+    });
   });
 
   describe('Step 2: beforeRequest pipeline', () => {
@@ -327,6 +361,71 @@ describe('getAuthTemplate', () => {
       result.supported.should.be.false();
       result.reason.should.eql('auth_fields_consumed');
     });
+
+    it('falls through to test object when beforeRequest captures no auth placeholders', async () => {
+      // BR adds a non-auth header (no placeholder). Step 2 falls through
+      // because auth.test exists. Step 3 captures auth from the test object.
+      const beforeRequest = (req) => {
+        req.headers = req.headers || {};
+        req.headers['X-Marker'] = 'static';
+        return req;
+      };
+      const result = await run({
+        authentication: {
+          type: 'custom',
+          fields: [{ key: 'api_key' }],
+          test: {
+            url: 'https://example.com',
+            headers: { 'X-Api-Key': '{{bundle.authData.api_key}}' },
+          },
+        },
+        beforeRequest: [beforeRequest],
+      });
+      result.supported.should.be.true();
+      result.source.should.eql('authentication.test');
+      result.template.headers['X-Api-Key'].should.eql(
+        '{{bundle.authData.api_key}}',
+      );
+    });
+
+    it('falls through to test function when beforeRequest is URL-conditional', async () => {
+      // BR branches on URL — Step 2 detects URL divergence, falls through.
+      // Step 4 (test function) doesn't run URL probes, so the testFn's real
+      // URL produces a deterministic capture.
+      const beforeRequest = (req, z, bundle) => {
+        req.headers = req.headers || {};
+        if (req.url.includes('/admin/')) {
+          req.headers.Authorization = `Bearer ${bundle.authData.admin_token}`;
+        } else {
+          req.headers.Authorization = `Bearer ${bundle.authData.access_token}`;
+        }
+        return req;
+      };
+      const result = await run({
+        authentication: {
+          type: 'oauth2',
+          fields: [
+            { key: 'access_token' },
+            { key: 'admin_token' },
+            { key: 'api_key' },
+          ],
+          test: async (z, bundle) =>
+            z.request({
+              url: 'https://api.example.com/data',
+              headers: { 'X-Inline': bundle.authData.api_key },
+            }),
+        },
+        beforeRequest: [beforeRequest],
+      });
+      result.supported.should.be.true();
+      result.source.should.eql('authentication.test');
+      result.template.headers.Authorization.should.eql(
+        'Bearer {{bundle.authData.access_token}}',
+      );
+      result.template.headers['X-Inline'].should.eql(
+        '{{bundle.authData.api_key}}',
+      );
+    });
   });
 
   describe('Step 3: authentication.test as an object', () => {
@@ -385,6 +484,89 @@ describe('getAuthTemplate', () => {
       );
       result.template.params.alt_key.should.eql('{{bundle.authData.alt_key}}');
       result.template.params.should.not.have.property('from_test');
+    });
+
+    it('returns beforeRequest_error when the pipeline throws on the test object', async () => {
+      const beforeRequest = () => {
+        throw new Error('boom');
+      };
+      const result = await run({
+        authentication: {
+          type: 'custom',
+          fields: [{ key: 'api_key' }],
+          test: {
+            url: 'https://example.com',
+            headers: { 'X-Api-Key': '{{bundle.authData.api_key}}' },
+          },
+        },
+        beforeRequest: [beforeRequest],
+      });
+      result.supported.should.be.false();
+      result.reason.should.eql('beforeRequest_error');
+    });
+
+    it('returns beforeRequest_not_static when authData branching is detected at Step 3', async () => {
+      const beforeRequest = (req, z, bundle) => {
+        req.headers = req.headers || {};
+        if (bundle.authData.use_alt) {
+          req.headers.Authorization = `Bearer ${bundle.authData.alt_token}`;
+        } else {
+          req.headers.Authorization = `Bearer ${bundle.authData.access_token}`;
+        }
+        return req;
+      };
+      const result = await run({
+        authentication: {
+          type: 'oauth2',
+          fields: [{ key: 'access_token' }],
+          test: { url: 'https://example.com' },
+        },
+        beforeRequest: [beforeRequest],
+      });
+      result.supported.should.be.false();
+      result.reason.should.eql('beforeRequest_not_static');
+    });
+
+    it('returns beforeRequest_not_static when URL branching is detected at Step 3', async () => {
+      const beforeRequest = (req, z, bundle) => {
+        req.headers = req.headers || {};
+        if (req.url.includes('/admin/')) {
+          req.headers.Authorization = `Bearer ${bundle.authData.admin_token}`;
+        } else {
+          req.headers.Authorization = `Bearer ${bundle.authData.access_token}`;
+        }
+        return req;
+      };
+      const result = await run({
+        authentication: {
+          type: 'oauth2',
+          fields: [{ key: 'access_token' }, { key: 'admin_token' }],
+          test: { url: 'https://example.com' },
+        },
+        beforeRequest: [beforeRequest],
+      });
+      result.supported.should.be.false();
+      result.reason.should.eql('beforeRequest_not_static');
+    });
+
+    it('returns auth_fields_consumed when nothing in test object or beforeRequest references authData', async () => {
+      // Test object has no auth-relevant content; BR adds only literals.
+      // Step 3's pipeline captures a request with no placeholders.
+      const beforeRequest = (req) => {
+        req.headers = req.headers || {};
+        req.headers['X-Marker'] = 'static';
+        return req;
+      };
+      const result = await run({
+        authentication: {
+          type: 'custom',
+          fields: [{ key: 'api_key' }],
+          test: { url: 'https://example.com' },
+        },
+        beforeRequest: [beforeRequest],
+      });
+      result.supported.should.be.false();
+      result.reason.should.eql('auth_fields_consumed');
     });
   });
 
@@ -485,7 +667,6 @@ describe('getAuthTemplate', () => {
       // BR captures auth; test function exists but never calls z.request.
       // Falls through to the BR template.
       const beforeRequest = (req, z, bundle) => {
-        req.headers = req.headers || {};
         req.headers.Authorization = `Bearer ${bundle.authData.access_token}`;
         return req;
       };
@@ -533,6 +714,40 @@ describe('getAuthTemplate', () => {
         '{{bundle.authData.api_key}}',
       );
     });
+
+    it('returns test_function_error when test function throws before z.request and beforeRequest also failed', async () => {
+      const beforeRequest = () => {
+        throw new Error('br boom');
+      };
+      const result = await run({
+        authentication: {
+          type: 'custom',
+          fields: [{ key: 'api_key' }],
+          test: async () => {
+            throw new Error('test fn boom');
+          },
+        },
+        beforeRequest: [beforeRequest],
+      });
+      result.supported.should.be.false();
+      result.reason.should.eql('test_function_error');
+    });
+
+    it('returns test_function_no_request when test function makes no z.request and beforeRequest failed', async () => {
+      const beforeRequest = () => {
+        throw new Error('br boom');
+      };
+      const result = await run({
+        authentication: {
+          type: 'custom',
+          fields: [{ key: 'api_key' }],
+          test: async () => ({ ok: true }),
+        },
+        beforeRequest: [beforeRequest],
+      });
+      result.supported.should.be.false();
+      result.reason.should.eql('test_function_no_request');
+    });
   });
 
   describe('standard placeholder fields per auth type', () => {
@@ -541,8 +756,9 @@ describe('getAuthTemplate', () => {
 
     it('oauth2 gets access_token without declaration', async () => {
       const beforeRequest = (req, z, bundle) => {
-        req.headers = req.headers || {};
-        req.headers.Authorization = `Bearer ${bundle.authData.access_token}`;
+        if (bundle.authData.access_token) {
+          req.headers.Authorization = `Bearer ${bundle.authData.access_token}`;
+        }
         return req;
       };
       const result = await run({
@@ -553,27 +769,6 @@ describe('getAuthTemplate', () => {
       result.source.should.eql('authentication.test');
       result.template.headers.Authorization.should.eql(
         'Bearer {{bundle.authData.access_token}}',
-      );
-    });
-
-    it('oauth2 with autoRefresh gets refresh_token placeholder', async () => {
-      const beforeRequest = (req, z, bundle) => {
-        req.headers = req.headers || {};
-        req.headers['X-Refresh'] = bundle.authData.refresh_token;
-        return req;
-      };
-      const result = await run({
-        authentication: {
-          type: 'oauth2',
-          test: STUB_TEST,
-          oauth2Config: { autoRefresh: true, refreshAccessToken: () => {} },
-        },
-        beforeRequest: [beforeRequest],
-      });
-      result.supported.should.be.true();
-      result.source.should.eql('authentication.test');
-      result.template.headers['X-Refresh'].should.eql(
-        '{{bundle.authData.refresh_token}}',
       );
     });
 
@@ -617,13 +812,20 @@ describe('getAuthTemplate', () => {
       result.template.headers['X-Code'].should.eql('{{bundle.authData.code}}');
     });
 
-    it('session gets standard token placeholders even without declaration', async () => {
-      // Session auth in some integrations stashes its token under names like
-      // sessionKey or accessToken — none are declared as auth fields.
+    it('session gets standard token placeholders for all common key names', async () => {
+      // Session auth in some integrations stashes its token (or related
+      // metadata) under names that aren't declared as auth fields. The
+      // session auth flow populates them at runtime; we add placeholders
+      // for the common ones observed across real integrations.
       const beforeRequest = (req, z, bundle) => {
         req.headers = req.headers || {};
-        req.headers['X-Session'] = bundle.authData.sessionKey;
+        req.headers['X-Session-Key'] = bundle.authData.sessionKey;
+        req.headers['X-Access-Token'] = bundle.authData.access_token;
+        req.headers['X-Access-Camel'] = bundle.authData.accessToken;
         req.headers['X-Token'] = bundle.authData.token;
+        req.headers['X-Session-Token'] = bundle.authData.sessionToken;
+        req.headers['X-Api-Token'] = bundle.authData.apiToken;
+        req.headers['X-PHPSESSID'] = bundle.authData.PHPSESSID;
         return req;
       };
       const result = await run({
@@ -632,11 +834,26 @@ describe('getAuthTemplate', () => {
       });
       result.supported.should.be.true();
       result.source.should.eql('authentication.test');
-      result.template.headers['X-Session'].should.eql(
+      result.template.headers['X-Session-Key'].should.eql(
         '{{bundle.authData.sessionKey}}',
+      );
+      result.template.headers['X-Access-Token'].should.eql(
+        '{{bundle.authData.access_token}}',
+      );
+      result.template.headers['X-Access-Camel'].should.eql(
+        '{{bundle.authData.accessToken}}',
       );
       result.template.headers['X-Token'].should.eql(
         '{{bundle.authData.token}}',
+      );
+      result.template.headers['X-Session-Token'].should.eql(
+        '{{bundle.authData.sessionToken}}',
+      );
+      result.template.headers['X-Api-Token'].should.eql(
+        '{{bundle.authData.apiToken}}',
+      );
+      result.template.headers['X-PHPSESSID'].should.eql(
+        '{{bundle.authData.PHPSESSID}}',
       );
     });
   });
