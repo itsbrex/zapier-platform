@@ -30,8 +30,9 @@ describe('renderAuthTemplate', () => {
   describe('beforeRequest pipeline', () => {
     it('renders auth headers added by a beforeRequest function', async () => {
       const beforeRequest = (req, z, bundle) => {
-        req.headers = req.headers || {};
-        req.headers.Authorization = `Bearer ${bundle.authData.access_token}`;
+        if (bundle.authData.access_token) {
+          req.headers.Authorization = `Bearer ${bundle.authData.access_token}`;
+        }
         return req;
       };
       const result = await run(
@@ -51,8 +52,9 @@ describe('renderAuthTemplate', () => {
 
     it('accepts beforeRequest as a single function (not an array)', async () => {
       const beforeRequest = (req, z, bundle) => {
-        req.headers = req.headers || {};
-        req.headers['X-Api-Key'] = bundle.authData.api_key;
+        if (bundle.authData.api_key) {
+          req.headers['X-Api-Key'] = bundle.authData.api_key;
+        }
         return req;
       };
       const result = await run(
@@ -90,7 +92,6 @@ describe('renderAuthTemplate', () => {
 
     it('renders both requestTemplate and beforeRequest contributions', async () => {
       const beforeRequest = (req, z, bundle) => {
-        req.headers = req.headers || {};
         req.headers.Authorization = `Bearer ${bundle.authData.access_token}`;
         return req;
       };
@@ -139,6 +140,46 @@ describe('renderAuthTemplate', () => {
       const expected =
         'Basic ' + Buffer.from('alice:s3cret').toString('base64');
       result.template.headers.Authorization.should.eql(expected);
+    });
+
+    it('oauth1 applies the oauth1SignRequest middleware', async () => {
+      // oauth1SignRequest reads from req.auth (set by a beforeRequest), then
+      // signs the request and emits an `Authorization: OAuth ...` header.
+      const beforeRequest = (req, z, bundle) => {
+        req.auth = {
+          oauth_consumer_key: bundle.authData.consumer_key,
+          oauth_consumer_secret: bundle.authData.consumer_secret,
+          oauth_token: bundle.authData.oauth_token,
+          oauth_token_secret: bundle.authData.oauth_token_secret,
+        };
+        return req;
+      };
+      const result = await run(
+        {
+          authentication: {
+            type: 'oauth1',
+            fields: [
+              { key: 'consumer_key' },
+              { key: 'consumer_secret' },
+              { key: 'oauth_token' },
+              { key: 'oauth_token_secret' },
+            ],
+          },
+          beforeRequest: [beforeRequest],
+        },
+        {
+          consumer_key: 'ck',
+          consumer_secret: 'cs',
+          oauth_token: 'ot',
+          oauth_token_secret: 'ots',
+        },
+      );
+      result.authType.should.eql('oauth1');
+      result.template.headers.Authorization.should.match(/^OAuth /);
+      result.template.headers.Authorization.should.match(
+        /oauth_consumer_key="ck"/,
+      );
+      result.template.headers.Authorization.should.match(/oauth_token="ot"/);
     });
   });
 
@@ -277,6 +318,34 @@ describe('renderAuthTemplate', () => {
         { api_key: 'unused' },
       );
       result.template.should.deepEqual({});
+    });
+
+    it('skips the function fallback when beforeRequest already captured auth', async () => {
+      // BR's contribution makes the pipeline-captured template non-empty,
+      // so the function fallback's `Object.keys(template).length === 0`
+      // guard fails and the testFn is not invoked. Verified by the test
+      // function throwing — if it ran, render would either swallow the
+      // throw and proceed, or end up with an empty template; here we get
+      // the BR-rendered template back.
+      const beforeRequest = (req, z, bundle) => {
+        req.headers = req.headers || {};
+        req.headers.Authorization = `Bearer ${bundle.authData.access_token}`;
+        return req;
+      };
+      const result = await run(
+        {
+          authentication: {
+            type: 'oauth2',
+            fields: [{ key: 'access_token' }],
+            test: async () => {
+              throw new Error('test fn should not run');
+            },
+          },
+          beforeRequest: [beforeRequest],
+        },
+        { access_token: 'real-token' },
+      );
+      result.template.headers.Authorization.should.eql('Bearer real-token');
     });
   });
 
