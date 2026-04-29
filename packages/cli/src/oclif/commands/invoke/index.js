@@ -436,6 +436,9 @@ InvokeCommand.args = {
   authData: Args.string({
     description:
       'Only used by `auth render`. JSON-encoded object with auth field values (e.g. `\'{"access_token":"a_token"}\'`). Values here take precedence over the .env file.',
+    // Don't auto-fill from piped stdin — that breaks `--inputData @-` usage
+    // for non-auth actions, which pipes into stdin for inputData.
+    ignoreStdin: true,
   }),
 };
 
