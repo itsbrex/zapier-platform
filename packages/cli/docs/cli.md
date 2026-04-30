@@ -14,21 +14,21 @@ $ npm install -g zapier-platform-cli
 
 > Show the status of the analytics that are collected. Also used to change what is collected.
 
-**Usage**: `zapier analytics`
+**Usage**: `zapier-platform analytics`
 
 **Flags**
 * `-m, --mode` | Choose how much information to share. Anonymous mode drops the OS type and Zapier user id, but keeps command info. Identifying information is used only for debugging purposes. One of `[enabled | anonymous | disabled]`.
 * `-d, --debug` | Show extra debugging output.
 
 **Examples**
-* `zapier analytics --mode enabled`
+* `zapier-platform analytics --mode enabled`
 
 
 ## build
 
 > Build a pushable zip from the current directory.
 
-**Usage**: `zapier build`
+**Usage**: `zapier-platform build`
 
 This command does the following:
 
@@ -40,7 +40,7 @@ This command does the following:
 * Zips up all needed `.js` files. If you want to include more files, add a "includeInBuild" property (array with strings of regexp paths) to your `.zapierapprc`.
 * Moves the zip to `build/build.zip` and `build/source.zip` and deletes the temp folder
 
-This command is typically followed by `zapier upload`.
+This command is typically followed by `zapier-platform upload`.
 
 **Flags**
 * `--disable-dependency-detection` | Disable "smart" file inclusion. By default, Zapier only includes files that are required by your entry point (`index.js` by default). If you (or your dependencies) require files dynamically (such as with `require(someVar)`), then you may see "Cannot find module" errors. Disabling this may make your `build.zip` too large. If that's the case, try using the `includeInBuild` option in your `.zapierapprc`. See the docs about `includeInBuild` for more info.
@@ -53,9 +53,9 @@ Skips installing a fresh copy of dependencies for shorter build time. Helpful fo
 
 > Create a new canary deployment, diverting a specified percentage of traffic from one version to another for a specified duration.
 
-**Usage**: `zapier canary:create VERSIONFROM VERSIONTO`
+**Usage**: `zapier-platform canary:create VERSIONFROM VERSIONTO`
 
-Only one canary can be active at the same time. You can run `zapier canary:list` to check. If you would like to create a new canary with different parameters, you can wait for the canary to finish, or delete it using `zapier canary:delete a.b.c x.y.z`.
+Only one canary can be active at the same time. You can run `zapier-platform canary:list` to check. If you would like to create a new canary with different parameters, you can wait for the canary to finish, or delete it using `zapier-platform canary:delete a.b.c x.y.z`.
 
 To canary traffic for a specific user, use the --user flag.
 
@@ -63,7 +63,7 @@ To canary traffic for an entire account, use the --account-id. Note: this scenar
 
 To canary traffic for a specific user within a specific account, use both --user and --account-id flags.
 
-Note: this is similar to `zapier migrate` but different in that this is temporary and will "revert" the changes once the specified duration is expired.
+Note: this is similar to `zapier-platform migrate` but different in that this is temporary and will "revert" the changes once the specified duration is expired.
 
 **Only use this command to canary traffic between non-breaking versions!**
 
@@ -80,51 +80,51 @@ Note: this is similar to `zapier migrate` but different in that this is temporar
 * `-d, --debug` | Show extra debugging output.
 
 **Examples**
-* `zapier canary:create 1.0.0 1.1.0 -p 10 -d 3600`
-* `zapier canary:create 2.0.0 2.1.0 --percent 25 --duration 1800 --user user@example.com`
-* `zapier canary:create 2.0.0 2.1.0 -p 15 -d 7200 -a 12345 -u user@example.com`
-* `zapier canary:create 2.0.0 2.1.0 -p 15 -d 7200 -a 12345`
+* `zapier-platform canary:create 1.0.0 1.1.0 -p 10 -d 3600`
+* `zapier-platform canary:create 2.0.0 2.1.0 --percent 25 --duration 1800 --user user@example.com`
+* `zapier-platform canary:create 2.0.0 2.1.0 -p 15 -d 7200 -a 12345 -u user@example.com`
+* `zapier-platform canary:create 2.0.0 2.1.0 -p 15 -d 7200 -a 12345`
 
 
 ## canary:delete
 
 > Delete an active canary deployment
 
-**Usage**: `zapier canary:delete VERSIONFROM VERSIONTO`
+**Usage**: `zapier-platform canary:delete VERSIONFROM VERSIONTO`
 
 **Arguments**
 * (required) `versionFrom` | Version to route traffic from
 * (required) `versionTo` | Version canary traffic is routed to
 
 **Examples**
-* `zapier canary:delete 1.0.0 1.1.0`
+* `zapier-platform canary:delete 1.0.0 1.1.0`
 
 
 ## canary:list
 
 > List all active canary deployments
 
-**Usage**: `zapier canary:list`
+**Usage**: `zapier-platform canary:list`
 
 **Flags**
 * `-d, --debug` | Show extra debugging output.
 * `-f, --format` | Change the way structured data is presented. If "json" or "raw", you can pipe the output of the command into other tools, such as jq. One of `[plain | json | raw | row | table]`. Defaults to `table`.
 
 **Examples**
-* `zapier canary:list`
+* `zapier-platform canary:list`
 
 
 ## convert
 
 > Convert a Visual Builder integration to a CLI integration.
 
-**Usage**: `zapier convert PATH`
+**Usage**: `zapier-platform convert PATH`
 
 The resulting CLI integration will be identical to its Visual Builder version and ready to push and use immediately!
 
 If you re-run this command on an existing directory it will leave existing files alone and not clobber them.
 
-You'll need to do a `zapier push` before the new version is visible in the editor, but otherwise you're good to go.
+You'll need to do a `zapier-platform push` before the new version is visible in the editor, but otherwise you're good to go.
 
 **Arguments**
 * (required) `path` | Relative to your current path - IE: `.` for current directory.
@@ -142,9 +142,9 @@ You'll need to do a `zapier push` before the new version is visible in the edito
 
 > Delete your integration (including all versions).
 
-**Usage**: `zapier delete:integration`
+**Usage**: `zapier-platform delete:integration`
 
-This only works if there are no active users or Zaps on any version. If you only want to delete certain versions, use the `zapier delete:version` command instead. It's unlikely that you'll be able to run this on an app that you've pushed publicly, since there are usually still users.
+This only works if there are no active users or Zaps on any version. If you only want to delete certain versions, use the `zapier-platform delete:version` command instead. It's unlikely that you'll be able to run this on an app that you've pushed publicly, since there are usually still users.
 
 **Flags**
 * `-d, --debug` | Show extra debugging output.
@@ -157,9 +157,9 @@ This only works if there are no active users or Zaps on any version. If you only
 
 > Delete a specific version of your integration.
 
-**Usage**: `zapier delete:version VERSION`
+**Usage**: `zapier-platform delete:version VERSION`
 
-This only works if there are no users or Zaps on that version. You will probably need to have run `zapier migrate` and `zapier deprecate` before this command will work.
+This only works if there are no users or Zaps on that version. You will probably need to have run `zapier-platform migrate` and `zapier-platform deprecate` before this command will work.
 
 **Arguments**
 * (required) `version` | Specify the version to delete. It must have no users or Zaps.
@@ -172,7 +172,7 @@ This only works if there are no users or Zaps on that version. You will probably
 
 > Mark a non-production version of your integration as deprecated, with removal by a certain date.
 
-**Usage**: `zapier deprecate VERSION DATE`
+**Usage**: `zapier-platform deprecate VERSION DATE`
 
 Use this when an integration version will not be supported or start breaking at a known date.
 
@@ -203,16 +203,16 @@ Do not use deprecation if you only have non-breaking changes, such as:
 * `-d, --debug` | Show extra debugging output.
 
 **Examples**
-* `zapier deprecate 1.2.3 2011-10-01`
-* `zapier deprecate 1.2.3 2011-10-01 --reason=security_vulnerability`
-* `zapier deprecate 1.2.3 2011-10-01 -r critical_bug`
+* `zapier-platform deprecate 1.2.3 2011-10-01`
+* `zapier-platform deprecate 1.2.3 2011-10-01 --reason=security_vulnerability`
+* `zapier-platform deprecate 1.2.3 2011-10-01 -r critical_bug`
 
 
 ## describe
 
 > Describe the current integration.
 
-**Usage**: `zapier describe`
+**Usage**: `zapier-platform describe`
 
 This command prints a human readable enumeration of your integrations's
 triggers, searches, and creates as seen by Zapier. Useful to understand how your
@@ -232,7 +232,7 @@ resources convert and relate to different actions.
 
 > Get environment variables for a version.
 
-**Usage**: `zapier env:get VERSION`
+**Usage**: `zapier-platform env:get VERSION`
 
 **Arguments**
 * (required) `version` | The version to get the environment for.
@@ -242,14 +242,14 @@ resources convert and relate to different actions.
 * `-f, --format` | Change the way structured data is presented. If "json" or "raw", you can pipe the output of the command into other tools, such as jq. One of `[plain | json | raw | row | table]`. Defaults to `table`.
 
 **Examples**
-* `zapier env:get 1.2.3`
+* `zapier-platform env:get 1.2.3`
 
 
 ## env:set
 
 > Set environment variables for a version.
 
-**Usage**: `zapier env:set VERSION [KEY-VALUE PAIRS...]`
+**Usage**: `zapier-platform env:set VERSION [KEY-VALUE PAIRS...]`
 
 **Arguments**
 * (required) `version` | The version to set the environment for. Values are copied forward when a new version is created, but this command will only ever affect the specified version.
@@ -260,14 +260,14 @@ resources convert and relate to different actions.
 * `-d, --debug` | Show extra debugging output.
 
 **Examples**
-* `zapier env:set 1.2.3 SECRET=12345 OTHER=4321`
+* `zapier-platform env:set 1.2.3 SECRET=12345 OTHER=4321`
 
 
 ## env:unset
 
 > Unset environment variables for a version.
 
-**Usage**: `zapier env:unset VERSION [KEYS...]`
+**Usage**: `zapier-platform env:unset VERSION [KEYS...]`
 
 **Arguments**
 * (required) `version` | The version to set the environment for.
@@ -278,14 +278,14 @@ resources convert and relate to different actions.
 * `-d, --debug` | Show extra debugging output.
 
 **Examples**
-* `zapier env:unset 1.2.3 SECRET OTHER`
+* `zapier-platform env:unset 1.2.3 SECRET OTHER`
 
 
 ## history
 
 > Get the history of your integration.
 
-**Usage**: `zapier history`
+**Usage**: `zapier-platform history`
 
 History includes all the changes made over the lifetime of your integration. This includes everything from creation, updates, migrations, admins, and invitee changes, as well as who made the change and when.
 
@@ -298,11 +298,11 @@ History includes all the changes made over the lifetime of your integration. Thi
 
 > Initialize a new Zapier integration with a project template.
 
-**Usage**: `zapier init PATH`
+**Usage**: `zapier-platform init PATH`
 
 After running this, you'll have a new integration in the specified directory. If you re-run this command on an existing directory, it will prompt before overwriting any existing files.
 
-This doesn't register or deploy the integration with Zapier - try the `zapier register` and `zapier push` commands for that!
+This doesn't register or deploy the integration with Zapier - try the `zapier-platform register` and `zapier-platform push` commands for that!
 
 **Arguments**
 * (required) `path` | Where to create the new integration. If the directory doesn't exist, it will be created. If the directory isn't empty, we'll ask for confirmation
@@ -314,17 +314,17 @@ This doesn't register or deploy the integration with Zapier - try the `zapier re
 * `-d, --debug` | Show extra debugging output.
 
 **Examples**
-* `zapier init myapp`
-* `zapier init ./path/myapp --template oauth2`
-* `zapier init ./path/myapp --template minimal --module esm`
-* `zapier init ./path/myapp --template oauth2 --language typescript`
+* `zapier-platform init myapp`
+* `zapier-platform init ./path/myapp --template oauth2`
+* `zapier-platform init ./path/myapp --template minimal --module esm`
+* `zapier-platform init ./path/myapp --template oauth2 --language typescript`
 
 
 ## integrations
 
 > List integrations you have admin access to.
 
-**Usage**: `zapier integrations`
+**Usage**: `zapier-platform integrations`
 
 This command also checks the current directory for a linked integration.
 
@@ -340,7 +340,7 @@ This command also checks the current directory for a linked integration.
 
 > Invoke an authentication method, a trigger, or a create/search action locally or remotely.
 
-**Usage**: `zapier invoke [ACTIONTYPE] [ACTIONKEY]`
+**Usage**: `zapier-platform invoke [ACTIONTYPE] [ACTIONKEY]`
 
 This command allows you to invoke your integration's authentication, triggers, and actions. With this tool, you can test and debug your integration code directly from your terminal without leaving your development environment and opening a browser.
 
@@ -486,7 +486,7 @@ The following is a non-exhaustive list of current limitations in local and relay
 
 > Lists ongoing migration or promotion jobs for the current integration.
 
-**Usage**: `zapier jobs`
+**Usage**: `zapier-platform jobs`
 
 A job represents a background process that will be queued up when users execute a "migrate" or "promote" command for the current integration.
 
@@ -504,14 +504,14 @@ Jobs are returned from oldest to newest.
 * `-f, --format` | Change the way structured data is presented. If "json" or "raw", you can pipe the output of the command into other tools, such as jq. One of `[plain | json | raw | row | table]`. Defaults to `table`.
 
 **Examples**
-* `zapier jobs`
+* `zapier-platform jobs`
 
 
 ## legacy
 
 > Mark a non-production version of your integration as legacy.
 
-**Usage**: `zapier legacy VERSION`
+**Usage**: `zapier-platform legacy VERSION`
 
 Use this when an integration version is no longer recommended for new users, but you don't want to block existing users from using it.
 
@@ -528,18 +528,18 @@ Reasons why you might want to mark a version as legacy:
 * `-d, --debug` | Show extra debugging output.
 
 **Examples**
-* `zapier legacy 1.2.3`
+* `zapier-platform legacy 1.2.3`
 
 
 ## link
 
 > Link the current directory with an existing integration.
 
-**Usage**: `zapier link`
+**Usage**: `zapier-platform link`
 
 This command generates a `.zapierapprc` file in the directory in which it's ran. This file ties this code to an integration and is referenced frequently during `push` and `validate` operations. This file should be checked into source control.
 
-If you're starting an integration from scratch, use `zapier init` instead.
+If you're starting an integration from scratch, use `zapier-platform init` instead.
 
 **Flags**
 * `-d, --debug` | Show extra debugging output.
@@ -549,7 +549,7 @@ If you're starting an integration from scratch, use `zapier init` instead.
 
 > Configure your `~/.zapierrc` with a deploy key.
 
-**Usage**: `zapier login`
+**Usage**: `zapier-platform login`
 
 **Flags**
 * `-s, --sso` | Use this flag if you log into Zapier a Single Sign-On (SSO) button and don't have a Zapier password.
@@ -560,7 +560,7 @@ If you're starting an integration from scratch, use `zapier init` instead.
 
 > Deactivate your active deploy key and reset `~/.zapierrc`.
 
-**Usage**: `zapier logout`
+**Usage**: `zapier-platform logout`
 
 **Flags**
 * `-d, --debug` | Show extra debugging output.
@@ -570,11 +570,11 @@ If you're starting an integration from scratch, use `zapier init` instead.
 
 > Print recent logs.
 
-**Usage**: `zapier logs`
+**Usage**: `zapier-platform logs`
 
 Logs are created when your integration is run as part of a Zap. They come from explicit calls to `z.console.log()`, usage of `z.request()`, and any runtime errors.
 
-This won't show logs from running locally with `zapier test`, since those never hit our server.
+This won't show logs from running locally with `zapier-platform test`, since those never hit our server.
 
 **Flags**
 * `-v, --version` | Filter logs to the specified version.
@@ -591,19 +591,19 @@ This won't show logs from running locally with `zapier test`, since those never 
 
 > Migrate a percentage of users or a single user from one version of your integration to another.
 
-**Usage**: `zapier migrate FROMVERSION TOVERSION [PERCENT]`
+**Usage**: `zapier-platform migrate FROMVERSION TOVERSION [PERCENT]`
 
-Start a migration to move users between different versions of your integration. You may also "revert" by simply swapping the from/to verion strings in the command line arguments (i.e. `zapier migrate 1.0.1 1.0.0`).
+Start a migration to move users between different versions of your integration. You may also "revert" by simply swapping the from/to verion strings in the command line arguments (i.e. `zapier-platform migrate 1.0.1 1.0.0`).
 
-**Only use this command to migrate users between non-breaking versions, use `zapier deprecate` if you have breaking changes!**
+**Only use this command to migrate users between non-breaking versions, use `zapier-platform deprecate` if you have breaking changes!**
 
-Migration time varies based on the number of affected Zaps. Be patient and check `zapier jobs` to track the status. Or use `zapier history` if you want to see older jobs.
+Migration time varies based on the number of affected Zaps. Be patient and check `zapier-platform jobs` to track the status. Or use `zapier-platform history` if you want to see older jobs.
 
 Since a migration is only for non-breaking changes, users are not emailed about the update/migration. It will be a transparent process for them.
 
 We recommend migrating a small subset of users first, via the percent argument, then watching error logs of the new version for any sort of odd behavior. When you feel confident there are no bugs, go ahead and migrate everyone. If you see unexpected errors, you can revert.
 
-You can migrate a specific user's Zaps by using `--user` (i.e. `zapier migrate 1.0.0 1.0.1 --user=user@example.com`). This will migrate Zaps that are private for that user. Zaps that are
+You can migrate a specific user's Zaps by using `--user` (i.e. `zapier-platform migrate 1.0.0 1.0.1 --user=user@example.com`). This will migrate Zaps that are private for that user. Zaps that are
 
   - [shared across the team](https://help.zapier.com/hc/en-us/articles/8496277647629),
   - [shared app connections](https://help.zapier.com/hc/en-us/articles/8496326497037-Share-app-connections-with-your-team), or
@@ -611,7 +611,7 @@ You can migrate a specific user's Zaps by using `--user` (i.e. `zapier migrate 1
 
 will **not** be migrated.
 
-Alternatively, you can pass the `--account` flag, (i.e. `zapier migrate 1.0.0 1.0.1 --account=account@example.com`). This will migrate all Zaps owned by the user, Private & Shared, within all accounts for which the specified user is a member.
+Alternatively, you can pass the `--account` flag, (i.e. `zapier-platform migrate 1.0.0 1.0.1 --account=account@example.com`). This will migrate all Zaps owned by the user, Private & Shared, within all accounts for which the specified user is a member.
 
 **The `--account` flag should be used cautiously as it can break shared Zaps for other users in Team or Enterprise accounts.**
 
@@ -631,24 +631,24 @@ You cannot pass both `--user` and `--account`.
 * `-d, --debug` | Show extra debugging output.
 
 **Examples**
-* `zapier migrate 1.0.0 1.0.1`
-* `zapier migrate 1.0.1 2.0.0 10`
-* `zapier migrate 2.0.0 2.0.1 --user=user@example.com`
-* `zapier migrate 2.0.0 2.0.1 --account=account@example.com`
+* `zapier-platform migrate 1.0.0 1.0.1`
+* `zapier-platform migrate 1.0.1 2.0.0 10`
+* `zapier-platform migrate 2.0.0 2.0.1 --user=user@example.com`
+* `zapier-platform migrate 2.0.0 2.0.1 --account=account@example.com`
 
 
 ## promote
 
 > Promote a specific version to public access.
 
-**Usage**: `zapier promote VERSION`
+**Usage**: `zapier-platform promote VERSION`
 
 Promote an integration version into production (non-private) rotation, which means new users can use this integration version.
 
 * This **does** mark the version as the official public version - all other versions & users are grandfathered.
-* This does **NOT** build/upload or deploy a version to Zapier - you should `zapier push` first.
-* This does **NOT** move old users over to this version - `zapier migrate 1.0.0 1.0.1` does that.
-* This does **NOT** recommend old users stop using this version - `zapier deprecate 1.0.0 2017-01-01` does that.
+* This does **NOT** build/upload or deploy a version to Zapier - you should `zapier-platform push` first.
+* This does **NOT** move old users over to this version - `zapier-platform migrate 1.0.0 1.0.1` does that.
+* This does **NOT** recommend old users stop using this version - `zapier-platform deprecate 1.0.0 2017-01-01` does that.
 
 Promotes are an inherently safe operation for all existing users of your integration.
 
@@ -656,7 +656,7 @@ After a promotion, go to your developer platform to [close issues that were reso
 
 If your integration is private and passes our integration checks, this will give you a URL to a form where you can fill in additional information for your integration to go public. After reviewing, the Zapier team will approve to make it public if there are no issues or decline with feedback.
 
-Check `zapier jobs` to track the status of the promotion. Or use `zapier history` if you want to see older jobs.
+Check `zapier-platform jobs` to track the status of the promotion. Or use `zapier-platform history` if you want to see older jobs.
 
 **Arguments**
 * (required) `version` | The version you want to promote.
@@ -666,18 +666,18 @@ Check `zapier jobs` to track the status of the promotion. Or use `zapier history
 * `-d, --debug` | Show extra debugging output.
 
 **Examples**
-* `zapier promote 1.0.0`
+* `zapier-platform promote 1.0.0`
 
 
 ## pull
 
 > Retrieve and update your local integration files with the promoted version (or latest version if not public).
 
-**Usage**: `zapier pull`
+**Usage**: `zapier-platform pull`
 
 This command updates your local integration files with the promoted version (or latest version if not public). You will be prompted with a confirmation dialog before continuing if there any destructive file changes.
 
-Zapier may release new versions of your integration with bug fixes or new features. In the event this occurs, you will be unable to do the following until your local files are updated by running `zapier pull`:
+Zapier may release new versions of your integration with bug fixes or new features. In the event this occurs, you will be unable to do the following until your local files are updated by running `zapier-platform pull`:
 
 * push to the promoted version
 * promote a new version
@@ -691,9 +691,9 @@ Zapier may release new versions of your integration with bug fixes or new featur
 
 > Build and upload the current integration.
 
-**Usage**: `zapier push`
+**Usage**: `zapier-platform push`
 
-This command is the same as running `zapier build` and `zapier upload` in sequence. See those for more info.
+This command is the same as running `zapier-platform build` and `zapier-platform upload` in sequence. See those for more info.
 
 **Flags**
 * `--disable-dependency-detection` | Disable "smart" file inclusion. By default, Zapier only includes files that are required by your entry point (`index.js` by default). If you (or your dependencies) require files dynamically (such as with `require(someVar)`), then you may see "Cannot find module" errors. Disabling this may make your `build.zip` too large. If that's the case, try using the `includeInBuild` option in your `.zapierapprc`. See the docs about `includeInBuild` for more info.
@@ -703,19 +703,19 @@ Skips installing a fresh copy of dependencies for shorter build time. Helpful fo
 * `--snapshot` | Pass in a label to create a snapshot version of this integration for development and testing purposes. The version will be created as: 0.0.0-MY-LABEL
 
 **Examples**
-* `zapier push`
-* `zapier push --snapshot MY-LABEL`
+* `zapier-platform push`
+* `zapier-platform push --snapshot MY-LABEL`
 
 
 ## register
 
 > Register a new integration in your account, or update the existing one if a `.zapierapprc` file is found.
 
-**Usage**: `zapier register [TITLE]`
+**Usage**: `zapier-platform register [TITLE]`
 
 This command creates a new integration and links it in the `./.zapierapprc` file. If `.zapierapprc` already exists, it will ask you if you want to update the currently-linked integration, as opposed to creating a new one.
 
-After registering a new integration, you can run `zapier push` to build and upload your integration for use in the Zapier editor. This will change `.zapierapprc`, which identifies this directory as holding code for a specific integration.
+After registering a new integration, you can run `zapier-platform push` to build and upload your integration for use in the Zapier editor. This will change `.zapierapprc`, which identifies this directory as holding code for a specific integration.
 
 **Arguments**
 * `title` | Your integration's public title. Asked interactively if not present.
@@ -731,18 +731,18 @@ After registering a new integration, you can run `zapier push` to build and uplo
 * `-d, --debug` | Show extra debugging output.
 
 **Examples**
-* `zapier register`
-* `zapier register "My Cool Integration"`
-* `zapier register "My Cool Integration" --desc "My Cool Integration helps you integrate your apps with the apps that you need." --no-subscribe`
-* `zapier register "My Cool Integration" --url "https://www.zapier.com" --audience private --role employee --category marketing-automation`
-* `zapier register --subscribe`
+* `zapier-platform register`
+* `zapier-platform register "My Cool Integration"`
+* `zapier-platform register "My Cool Integration" --desc "My Cool Integration helps you integrate your apps with the apps that you need." --no-subscribe`
+* `zapier-platform register "My Cool Integration" --url "https://www.zapier.com" --audience private --role employee --category marketing-automation`
+* `zapier-platform register --subscribe`
 
 
 ## scaffold
 
 > Add a starting trigger, create, search, or resource to your integration.
 
-**Usage**: `zapier scaffold ACTIONTYPE NOUN`
+**Usage**: `zapier-platform scaffold ACTIONTYPE NOUN`
 
 The first argument should be one of `trigger|search|create|resource` followed by the noun that this will act on (something like "contact" or "deal").
 
@@ -766,17 +766,17 @@ You can mix and match several options to customize the created scaffold for your
 * `-d, --debug` | Show extra debugging output.
 
 **Examples**
-* `zapier scaffold trigger contact`
-* `zapier scaffold search contact --dest=my_src/searches`
-* `zapier scaffold create contact --entry=src/index.js`
-* `zapier scaffold resource contact --force`
+* `zapier-platform scaffold trigger contact`
+* `zapier-platform scaffold search contact --dest=my_src/searches`
+* `zapier-platform scaffold create contact --entry=src/index.js`
+* `zapier-platform scaffold resource contact --force`
 
 
 ## team:add
 
 > Add a team member to your integration.
 
-**Usage**: `zapier team:add EMAIL ROLE [MESSAGE]`
+**Usage**: `zapier-platform team:add EMAIL ROLE [MESSAGE]`
 
 These users come in three levels:
 
@@ -795,9 +795,9 @@ Team members can be freely added and removed.
 * `-d, --debug` | Show extra debugging output.
 
 **Examples**
-* `zapier team:add bruce@wayne.com admin`
-* `zapier team:add robin@wayne.com collaborator "Hey Robin, check out this app."`
-* `zapier team:add alfred@wayne.com subscriber "Hey Alfred, check out this app."`
+* `zapier-platform team:add bruce@wayne.com admin`
+* `zapier-platform team:add robin@wayne.com collaborator "Hey Robin, check out this app."`
+* `zapier-platform team:add alfred@wayne.com subscriber "Hey Alfred, check out this app."`
 
 **Aliases**
 * `team:invite`
@@ -807,7 +807,7 @@ Team members can be freely added and removed.
 
 > Get team members involved with your integration.
 
-**Usage**: `zapier team:get`
+**Usage**: `zapier-platform team:get`
 
 These users come in three levels:
 
@@ -815,7 +815,7 @@ These users come in three levels:
   * `collaborator`, who has read-only access for the app, and will receive periodic email updates. These updates include quarterly health scores and more.
   * `subscriber`, who can't directly access the app, but will receive periodic email updates. These updates include quarterly health scores and more.
 
-Use the `zapier team:add` and `zapier team:remove` commands to modify your team.
+Use the `zapier-platform team:add` and `zapier-platform team:remove` commands to modify your team.
 
 
 **Flags**
@@ -830,7 +830,7 @@ Use the `zapier team:add` and `zapier team:remove` commands to modify your team.
 
 > Remove a team member from all versions of your integration.
 
-**Usage**: `zapier team:remove`
+**Usage**: `zapier-platform team:remove`
 
 Admins will immediately lose write access to the integration.
 Collaborators will immediately lose read access to the integration.
@@ -847,33 +847,33 @@ Subscribers won't receive future email updates.
 
 > Test your integration via the "test" script in your "package.json".
 
-**Usage**: `zapier test`
+**Usage**: `zapier-platform test`
 
 This command is a wrapper around `npm test` that also validates the structure of your integration and sets up extra environment variables.
 
 You can pass any args/flags after a `--`; they will get forwarded onto your test script.
 
 **Flags**
-* `--skip-validate` | Forgo running `zapier validate` before tests are run. This will speed up tests if you're modifying functionality of an existing integration rather than adding new actions.
+* `--skip-validate` | Forgo running `zapier-platform validate` before tests are run. This will speed up tests if you're modifying functionality of an existing integration rather than adding new actions.
 * `--yarn` | Use `yarn` instead of `npm`. This happens automatically if there's a `yarn.lock` file, but you can manually force `yarn` if you run tests from a sub-directory.
 * `--pnpm` | Use `pnpm` instead of `npm`. This happens automatically if there's a `pnpm-lock.yaml` file, but you can manually force `pnpm` if you run tests from a sub-directory.
 * `-d, --debug` | Show extra debugging output.
 
 **Examples**
-* `zapier test`
-* `zapier test --skip-validate -- -t 30000 --grep api`
-* `zapier test -- -fo --testNamePattern "auth pass"`
+* `zapier-platform test`
+* `zapier-platform test --skip-validate -- -t 30000 --grep api`
+* `zapier-platform test -- -fo --testNamePattern "auth pass"`
 
 
 ## upload
 
 > Upload the latest build of your integration to Zapier.
 
-**Usage**: `zapier upload`
+**Usage**: `zapier-platform upload`
 
 This command sends both build/build.zip and build/source.zip to Zapier for use.
 
-Typically we recommend using `zapier push`, which does a build and upload, rather than `upload` by itself.
+Typically we recommend using `zapier-platform push`, which does a build and upload, rather than `upload` by itself.
 
 
 **Flags**
@@ -884,9 +884,9 @@ Typically we recommend using `zapier push`, which does a build and upload, rathe
 
 > Add a user to some or all versions of your integration.
 
-**Usage**: `zapier users:add EMAIL [VERSION]`
+**Usage**: `zapier-platform users:add EMAIL [VERSION]`
 
-When this command is run, we'll send an email to the user inviting them to try your integration. You can track the status of that invite using the `zapier users:get` command.
+When this command is run, we'll send an email to the user inviting them to try your integration. You can track the status of that invite using the `zapier-platform users:get` command.
 
 Invited users will be able to see your integration's name, logo, and description. They'll also be able to create Zaps using any available triggers and actions.
 
@@ -899,8 +899,8 @@ Invited users will be able to see your integration's name, logo, and description
 * `-d, --debug` | Show extra debugging output.
 
 **Examples**
-* `zapier users:add bruce@wayne.com`
-* `zapier users:add alfred@wayne.com 1.2.3`
+* `zapier-platform users:add bruce@wayne.com`
+* `zapier-platform users:add alfred@wayne.com 1.2.3`
 
 **Aliases**
 * `users:invite`
@@ -910,9 +910,9 @@ Invited users will be able to see your integration's name, logo, and description
 
 > Get a list of users who have been invited to your integration.
 
-**Usage**: `zapier users:get`
+**Usage**: `zapier-platform users:get`
 
-Note that this list of users is NOT a comprehensive list of everyone who is using your integration. It only includes users who were invited directly by email (using the `zapier users:add` command or the web UI). Users who joined by clicking links generated using the `zapier user:links` command won't show up here.
+Note that this list of users is NOT a comprehensive list of everyone who is using your integration. It only includes users who were invited directly by email (using the `zapier-platform users:add` command or the web UI). Users who joined by clicking links generated using the `zapier-platform user:links` command won't show up here.
 
 **Flags**
 * `-d, --debug` | Show extra debugging output.
@@ -926,7 +926,7 @@ Note that this list of users is NOT a comprehensive list of everyone who is usin
 
 > Get a list of links that are used to invite users to your integration.
 
-**Usage**: `zapier users:links`
+**Usage**: `zapier-platform users:links`
 
 **Flags**
 * `-d, --debug` | Show extra debugging output.
@@ -937,7 +937,7 @@ Note that this list of users is NOT a comprehensive list of everyone who is usin
 
 > Remove a user from all versions of your integration.
 
-**Usage**: `zapier users:remove EMAIL`
+**Usage**: `zapier-platform users:remove EMAIL`
 
 When this command is run, their Zaps will immediately turn off. They won't be able to use your app again until they're re-invited or it has gone public. In practice, this command isn't run often as it's very disruptive to users.
 
@@ -956,9 +956,9 @@ When this command is run, their Zaps will immediately turn off. They won't be ab
 
 > Validate your integration.
 
-**Usage**: `zapier validate`
+**Usage**: `zapier-platform validate`
 
-Run the standard validation routine powered by json-schema that checks your integration for any structural errors. This is the same routine that runs during `zapier build`, `zapier upload`, `zapier push` or even as a test in `zapier test`.
+Run the standard validation routine powered by json-schema that checks your integration for any structural errors. This is the same routine that runs during `zapier-platform build`, `zapier-platform upload`, `zapier-platform push` or even as a test in `zapier-platform test`.
 
 **Flags**
 * `--without-style` | Forgo pinging the Zapier server to run further checks.
@@ -967,17 +967,17 @@ Run the standard validation routine powered by json-schema that checks your inte
 * `-f, --format` | Change the way structured data is presented. If "json" or "raw", you can pipe the output of the command into other tools, such as jq. One of `[plain | json | raw | row | table]`. Defaults to `table`.
 
 **Examples**
-* `zapier validate`
-* `zapier validate --without-style`
-* `zapier validate --skip-build`
-* `zapier validate --format json`
+* `zapier-platform validate`
+* `zapier-platform validate --without-style`
+* `zapier-platform validate --skip-build`
+* `zapier-platform validate --format json`
 
 
 ## versions
 
 > List the versions of your integration available for use in Zapier automations.
 
-**Usage**: `zapier versions`
+**Usage**: `zapier-platform versions`
 
 **Flags**
 * `-a, --all` | List all versions, including deprecated versions.
