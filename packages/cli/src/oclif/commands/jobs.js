@@ -75,12 +75,12 @@ class JobsCommand extends BaseCommand {
         ['Errors', 'error_message'],
       ],
       emptyMessage:
-        'No recent migration or promotion jobs found. Try `zapier history` if you see older jobs.',
+        'No recent migration or promotion jobs found. Try `zapier-platform history` if you see older jobs.',
     });
   }
 }
 
-JobsCommand.examples = ['zapier jobs'];
+JobsCommand.examples = ['zapier-platform jobs'];
 JobsCommand.description = `Lists ongoing migration or promotion jobs for the current integration.
 
 A job represents a background process that will be queued up when users execute a "migrate" or "promote" command for the current integration.

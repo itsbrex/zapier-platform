@@ -23,7 +23,7 @@ class DeprecateCommand extends BaseCommand {
 
     this.log(
       `${colors.yellow('Warning: Deprecation is an irreversible action that will eventually block access to this version.')}\n` +
-        `${colors.yellow('If all your changes are non-breaking, use `zapier migrate` instead to move users over to a newer version.')}\n`,
+        `${colors.yellow('If all your changes are non-breaking, use `zapier-platform migrate` instead to move users over to a newer version.')}\n`,
     );
 
     // Get deprecation reason - either from flag or prompt user
@@ -118,9 +118,9 @@ DeprecateCommand.args = {
   }),
 };
 DeprecateCommand.examples = [
-  'zapier deprecate 1.2.3 2011-10-01',
-  'zapier deprecate 1.2.3 2011-10-01 --reason=security_vulnerability',
-  'zapier deprecate 1.2.3 2011-10-01 -r critical_bug',
+  'zapier-platform deprecate 1.2.3 2011-10-01',
+  'zapier-platform deprecate 1.2.3 2011-10-01 --reason=security_vulnerability',
+  'zapier-platform deprecate 1.2.3 2011-10-01 -r critical_bug',
 ];
 DeprecateCommand.description = `Mark a non-production version of your integration as deprecated, with removal by a certain date.
 

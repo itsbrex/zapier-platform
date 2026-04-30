@@ -73,7 +73,7 @@ TestCommand.flags = buildFlags({
   commandFlags: {
     'skip-validate': Flags.boolean({
       description:
-        "Forgo running `zapier validate` before tests are run. This will speed up tests if you're modifying functionality of an existing integration rather than adding new actions.",
+        "Forgo running `zapier-platform validate` before tests are run. This will speed up tests if you're modifying functionality of an existing integration rather than adding new actions.",
     }),
     yarn: Flags.boolean({
       description:
@@ -89,9 +89,9 @@ TestCommand.flags = buildFlags({
 TestCommand.skipValidInstallCheck = false;
 TestCommand.strict = false;
 TestCommand.examples = [
-  'zapier test',
-  'zapier test --skip-validate -- -t 30000 --grep api',
-  'zapier test -- -fo --testNamePattern "auth pass"',
+  'zapier-platform test',
+  'zapier-platform test --skip-validate -- -t 30000 --grep api',
+  'zapier-platform test -- -fo --testNamePattern "auth pass"',
 ];
 TestCommand.description = `Test your integration via the "test" script in your "package.json".
 

@@ -24,12 +24,12 @@ class BuildCommand extends BaseCommand {
 
     this.log(
       `\nBuild complete! Created ${BUILD_PATH} and ${SOURCE_PATH}.\n` +
-        `Now you can upload them with the ${colors.bold.underline('zapier upload')} command.`,
+        `Now you can upload them with the ${colors.bold.underline('zapier-platform upload')} command.`,
     );
 
     if (!skipDepInstall) {
       this.log(
-        `\nTip: Try ${colors.bold.underline('zapier build --skip-dep-install')} for faster builds.`,
+        `\nTip: Try ${colors.bold.underline('zapier-platform build --skip-dep-install')} for faster builds.`,
       );
     }
   }
@@ -64,6 +64,6 @@ This command does the following:
 * Zips up all needed \`.js\` files. If you want to include more files, add a "includeInBuild" property (array with strings of regexp paths) to your \`${CURRENT_APP_FILE}\`.
 * Moves the zip to \`${BUILD_PATH}\` and \`${SOURCE_PATH}\` and deletes the temp folder
 
-This command is typically followed by \`zapier upload\`.`;
+This command is typically followed by \`zapier-platform upload\`.`;
 
 module.exports = BuildCommand;

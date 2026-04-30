@@ -27,6 +27,6 @@ DeleteVersionCommand.flags = buildFlags();
 DeleteVersionCommand.skipValidInstallCheck = true;
 DeleteVersionCommand.description = `Delete a specific version of your integration.
 
-This only works if there are no users or Zaps on that version. You will probably need to have run \`zapier migrate\` and \`zapier deprecate\` before this command will work.`;
+This only works if there are no users or Zaps on that version. You will probably need to have run \`zapier-platform migrate\` and \`zapier-platform deprecate\` before this command will work.`;
 
 module.exports = DeleteVersionCommand;

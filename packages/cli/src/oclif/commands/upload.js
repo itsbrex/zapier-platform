@@ -21,7 +21,7 @@ UploadCommand.description = `Upload the latest build of your integration to Zapi
 
 This command sends both ${BUILD_PATH} and ${SOURCE_PATH} to Zapier for use.
 
-Typically we recommend using \`zapier push\`, which does a build and upload, rather than \`upload\` by itself.
+Typically we recommend using \`zapier-platform push\`, which does a build and upload, rather than \`upload\` by itself.
 `;
 
 module.exports = UploadCommand;

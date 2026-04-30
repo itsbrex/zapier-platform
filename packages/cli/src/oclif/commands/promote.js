@@ -279,15 +279,15 @@ PromoteCommand.args = {
 };
 
 PromoteCommand.skipValidInstallCheck = true;
-PromoteCommand.examples = ['zapier promote 1.0.0'];
+PromoteCommand.examples = ['zapier-platform promote 1.0.0'];
 PromoteCommand.description = `Promote a specific version to public access.
 
 Promote an integration version into production (non-private) rotation, which means new users can use this integration version.
 
 * This **does** mark the version as the official public version - all other versions & users are grandfathered.
-* This does **NOT** build/upload or deploy a version to Zapier - you should \`zapier push\` first.
-* This does **NOT** move old users over to this version - \`zapier migrate 1.0.0 1.0.1\` does that.
-* This does **NOT** recommend old users stop using this version - \`zapier deprecate 1.0.0 2017-01-01\` does that.
+* This does **NOT** build/upload or deploy a version to Zapier - you should \`zapier-platform push\` first.
+* This does **NOT** move old users over to this version - \`zapier-platform migrate 1.0.0 1.0.1\` does that.
+* This does **NOT** recommend old users stop using this version - \`zapier-platform deprecate 1.0.0 2017-01-01\` does that.
 
 Promotes are an inherently safe operation for all existing users of your integration.
 
@@ -295,6 +295,6 @@ After a promotion, go to your developer platform to [close issues that were reso
 
 If your integration is private and passes our integration checks, this will give you a URL to a form where you can fill in additional information for your integration to go public. After reviewing, the Zapier team will approve to make it public if there are no issues or decline with feedback.
 
-Check \`zapier jobs\` to track the status of the promotion. Or use \`zapier history\` if you want to see older jobs.`;
+Check \`zapier-platform jobs\` to track the status of the promotion. Or use \`zapier-platform history\` if you want to see older jobs.`;
 
 module.exports = PromoteCommand;

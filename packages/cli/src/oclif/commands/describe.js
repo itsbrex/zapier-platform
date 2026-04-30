@@ -95,7 +95,7 @@ class DescribeCommand extends BaseCommand {
           authentication.redirect_uri = version.oauth_redirect_uri;
         } else {
           authentication.redirect_uri = grey(
-            'Run `zapier push` to see the redirect_uri.',
+            'Run `zapier-platform push` to see the redirect_uri.',
           );
         }
       }
@@ -182,13 +182,13 @@ class DescribeCommand extends BaseCommand {
           ['Available Methods', 'paths', grey('n/a')],
         ],
         emptyMessage: grey(
-          `Nothing found for ${type}. Use the \`zapier scaffold\` command to add one.`,
+          `Nothing found for ${type}. Use the \`zapier-platform scaffold\` command to add one.`,
         ),
       });
 
       this.log();
 
-      this.log('To add more, use the `zapier scaffold` command.');
+      this.log('To add more, use the `zapier-platform scaffold` command.');
     });
   }
 }

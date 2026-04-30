@@ -93,7 +93,7 @@ class LogsCommand extends BaseCommand {
       rows: logs.reverse(), // oldest logs first
       headers,
       emptyMessage:
-        'No logs found. Try adding some `z.request()`, `z.console.log()` and doing a `zapier push`!\n',
+        'No logs found. Try adding some `z.request()`, `z.console.log()` and doing a `zapier-platform push`!\n',
     });
 
     if (hasLogs) {
@@ -102,7 +102,7 @@ class LogsCommand extends BaseCommand {
       if (this.flags.type === 'http' && !this.flags.detailed) {
         this.log(
           grey(
-            '  TIP: Use `zapier logs --type=http --detailed` to include response information.',
+            '  TIP: Use `zapier-platform logs --type=http --detailed` to include response information.',
           ),
         );
       }
@@ -119,6 +119,6 @@ LogsCommand.description = `Print recent logs.
 
 Logs are created when your integration is run as part of a Zap. They come from explicit calls to \`z.console.log()\`, usage of \`z.request()\`, and any runtime errors.
 
-This won't show logs from running locally with \`zapier test\`, since those never hit our server.`;
+This won't show logs from running locally with \`zapier-platform test\`, since those never hit our server.`;
 
 module.exports = LogsCommand;

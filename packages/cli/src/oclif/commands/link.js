@@ -37,7 +37,7 @@ class LinkCommand extends BaseCommand {
     this.startSpinner(`Setting up ${CURRENT_APP_FILE}`);
     await writeLinkedAppConfig(chosenApp);
     this.stopSpinner();
-    this.log(`Done! Now you can \`${cyan('zapier push')}\``);
+    this.log(`Done! Now you can \`${cyan('zapier-platform push')}\``);
   }
 }
 
@@ -47,6 +47,6 @@ LinkCommand.description = `Link the current directory with an existing integrati
 
 This command generates a \`${CURRENT_APP_FILE}\` file in the directory in which it's ran. This file ties this code to an integration and is referenced frequently during \`push\` and \`validate\` operations. This file should be checked into source control.
 
-If you're starting an integration from scratch, use \`zapier init\` instead.`;
+If you're starting an integration from scratch, use \`zapier-platform init\` instead.`;
 
 module.exports = LinkCommand;

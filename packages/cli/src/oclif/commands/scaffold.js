@@ -203,10 +203,10 @@ ScaffoldCommand.flags = buildFlags({
 });
 
 ScaffoldCommand.examples = [
-  'zapier scaffold trigger contact',
-  'zapier scaffold search contact --dest=my_src/searches',
-  'zapier scaffold create contact --entry=src/index.js',
-  'zapier scaffold resource contact --force',
+  'zapier-platform scaffold trigger contact',
+  'zapier-platform scaffold search contact --dest=my_src/searches',
+  'zapier-platform scaffold create contact --entry=src/index.js',
+  'zapier-platform scaffold resource contact --force',
 ];
 
 ScaffoldCommand.description = `Add a starting trigger, create, search, or resource to your integration.

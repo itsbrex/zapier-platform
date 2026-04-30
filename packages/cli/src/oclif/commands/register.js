@@ -18,7 +18,7 @@ const {
 
 class RegisterCommand extends ZapierBaseCommand {
   /**
-   * Entry point function that runs when user runs `zapier register`
+   * Entry point function that runs when user runs `zapier-platform register`
    */
   async perform() {
     // Flag validation
@@ -73,7 +73,7 @@ class RegisterCommand extends ZapierBaseCommand {
         await writeLinkedAppConfig(app, process.cwd());
         this.stopSpinner();
         this.log(
-          '\nFinished! Now that your integration is registered with Zapier, you can `zapier push`!',
+          '\nFinished! Now that your integration is registered with Zapier, you can `zapier-platform push`!',
         );
         break;
       }
@@ -297,16 +297,16 @@ RegisterCommand.flags = buildFlags({
   },
 });
 RegisterCommand.examples = [
-  'zapier register',
-  'zapier register "My Cool Integration"',
-  'zapier register "My Cool Integration" --desc "My Cool Integration helps you integrate your apps with the apps that you need." --no-subscribe',
-  'zapier register "My Cool Integration" --url "https://www.zapier.com" --audience private --role employee --category marketing-automation',
-  'zapier register --subscribe',
+  'zapier-platform register',
+  'zapier-platform register "My Cool Integration"',
+  'zapier-platform register "My Cool Integration" --desc "My Cool Integration helps you integrate your apps with the apps that you need." --no-subscribe',
+  'zapier-platform register "My Cool Integration" --url "https://www.zapier.com" --audience private --role employee --category marketing-automation',
+  'zapier-platform register --subscribe',
 ];
 RegisterCommand.description = `Register a new integration in your account, or update the existing one if a \`${CURRENT_APP_FILE}\` file is found.
 
 This command creates a new integration and links it in the \`./${CURRENT_APP_FILE}\` file. If \`${CURRENT_APP_FILE}\` already exists, it will ask you if you want to update the currently-linked integration, as opposed to creating a new one.
 
-After registering a new integration, you can run \`zapier push\` to build and upload your integration for use in the Zapier editor. This will change \`${CURRENT_APP_FILE}\`, which identifies this directory as holding code for a specific integration.`;
+After registering a new integration, you can run \`zapier-platform push\` to build and upload your integration for use in the Zapier editor. This will change \`${CURRENT_APP_FILE}\`, which identifies this directory as holding code for a specific integration.`;
 
 module.exports = RegisterCommand;
