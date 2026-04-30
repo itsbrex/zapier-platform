@@ -69,7 +69,7 @@ const refreshAuth = async (context) => {
   }
   if (_.isEmpty(context.authData)) {
     throw new Error(
-      'No auth data found in the .env file. Run `zapier invoke auth start` first to initialize the auth data.',
+      'No auth data found in the .env file. Run `zapier-platform invoke auth start` first to initialize the auth data.',
     );
   }
   switch (authentication.type) {

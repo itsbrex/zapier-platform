@@ -56,16 +56,16 @@ InitCommand.args = {
   }),
 };
 InitCommand.examples = [
-  'zapier init myapp',
-  'zapier init ./path/myapp --template oauth2',
-  'zapier init ./path/myapp --template minimal --module esm',
-  'zapier init ./path/myapp --template oauth2 --language typescript',
+  'zapier-platform init myapp',
+  'zapier-platform init ./path/myapp --template oauth2',
+  'zapier-platform init ./path/myapp --template minimal --module esm',
+  'zapier-platform init ./path/myapp --template oauth2 --language typescript',
 ];
 InitCommand.description = `Initialize a new Zapier integration with a project template.
 
 After running this, you'll have a new integration in the specified directory. If you re-run this command on an existing directory, it will prompt before overwriting any existing files.
 
-This doesn't register or deploy the integration with Zapier - try the \`zapier register\` and \`zapier push\` commands for that!`;
+This doesn't register or deploy the integration with Zapier - try the \`zapier-platform register\` and \`zapier-platform push\` commands for that!`;
 
 InitCommand.skipValidInstallCheck = true;
 

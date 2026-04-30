@@ -34,7 +34,7 @@ class TeamListCommand extends ZapierBaseCommand {
 
     this.log(
       `To invite more team members, use the \`${cyan(
-        'zapier team:add',
+        'zapier-platform team:add',
       )}\` command.`,
     );
   }
@@ -49,7 +49,7 @@ These users come in three levels:
   * \`collaborator\`, who has read-only access for the app, and will receive periodic email updates. These updates include quarterly health scores and more.
   * \`subscriber\`, who can't directly access the app, but will receive periodic email updates. These updates include quarterly health scores and more.
 
-Use the \`zapier team:add\` and \`zapier team:remove\` commands to modify your team.
+Use the \`zapier-platform team:add\` and \`zapier-platform team:remove\` commands to modify your team.
 `;
 TeamListCommand.aliases = ['team:list'];
 TeamListCommand.skipValidInstallCheck = true;

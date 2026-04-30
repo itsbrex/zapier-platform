@@ -19,7 +19,7 @@ class GetEnvCommand extends BaseCommand {
       emptyMessage: `Version ${version} has no environment values set`,
     });
 
-    this.log('Set new values with `zapier env:set`');
+    this.log('Set new values with `zapier-platform env:set`');
   }
 }
 
@@ -31,7 +31,7 @@ GetEnvCommand.args = {
 };
 GetEnvCommand.flags = buildFlags({ opts: { format: true } });
 GetEnvCommand.description = `Get environment variables for a version.`;
-GetEnvCommand.examples = [`zapier env:get 1.2.3`];
+GetEnvCommand.examples = [`zapier-platform env:get 1.2.3`];
 GetEnvCommand.skipValidInstallCheck = true;
 
 module.exports = GetEnvCommand;

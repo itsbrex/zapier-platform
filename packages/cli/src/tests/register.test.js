@@ -138,7 +138,7 @@ describe('RegisterCommand', () => {
         '--subscribe',
       ]);
       expect(stdout).to.contain(
-        'Finished! Now that your integration is registered with Zapier, you can `zapier push`!',
+        'Finished! Now that your integration is registered with Zapier, you can `zapier-platform push`!',
       );
     });
   });

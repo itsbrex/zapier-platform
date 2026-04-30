@@ -144,13 +144,13 @@ ValidateCommand.flags = buildFlags({
 });
 
 ValidateCommand.examples = [
-  'zapier validate',
-  'zapier validate --without-style',
-  'zapier validate --skip-build',
-  'zapier validate --format json',
+  'zapier-platform validate',
+  'zapier-platform validate --without-style',
+  'zapier-platform validate --skip-build',
+  'zapier-platform validate --format json',
 ];
 ValidateCommand.description = `Validate your integration.
 
-Run the standard validation routine powered by json-schema that checks your integration for any structural errors. This is the same routine that runs during \`zapier build\`, \`zapier upload\`, \`zapier push\` or even as a test in \`zapier test\`.`;
+Run the standard validation routine powered by json-schema that checks your integration for any structural errors. This is the same routine that runs during \`zapier-platform build\`, \`zapier-platform upload\`, \`zapier-platform push\` or even as a test in \`zapier-platform test\`.`;
 
 module.exports = ValidateCommand;

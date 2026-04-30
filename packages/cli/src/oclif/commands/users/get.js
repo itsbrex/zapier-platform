@@ -33,9 +33,9 @@ class UsersListCommand extends ZapierBaseCommand {
 
     this.log(
       `\nTo invite users via a link, use the \`${cyan(
-        'zapier users:links',
+        'zapier-platform users:links',
       )}\` command. To invite a specific user by email, use the \`${cyan(
-        'zapier users:add',
+        'zapier-platform users:add',
       )}\` command.`,
     );
   }
@@ -45,9 +45,9 @@ UsersListCommand.flags = buildFlags({ opts: { format: true } });
 UsersListCommand.description = `Get a list of users who have been invited to your integration.
 
 Note that this list of users is NOT a comprehensive list of everyone who is using your integration. It only includes users who were invited directly by email (using the \`${cyan(
-  'zapier users:add',
+  'zapier-platform users:add',
 )}\` command or the web UI). Users who joined by clicking links generated using the \`${cyan(
-  'zapier user:links',
+  'zapier-platform user:links',
 )}\` command won't show up here.`;
 UsersListCommand.aliases = ['users:list'];
 UsersListCommand.skipValidInstallCheck = true;

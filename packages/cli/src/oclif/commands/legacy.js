@@ -45,7 +45,7 @@ LegacyCommand.args = {
     required: true,
   }),
 };
-LegacyCommand.examples = ['zapier legacy 1.2.3'];
+LegacyCommand.examples = ['zapier-platform legacy 1.2.3'];
 LegacyCommand.description = `Mark a non-production version of your integration as legacy.
 
 Use this when an integration version is no longer recommended for new users, but you don't want to block existing users from using it.

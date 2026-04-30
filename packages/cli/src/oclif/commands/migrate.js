@@ -143,7 +143,7 @@ class MigrateCommand extends BaseCommand {
     this.stopSpinner();
 
     this.log(
-      `\nMigration successfully queued, check ${colors.bold.underline('zapier jobs')} to track the status. Migrations usually take between 5-10 minutes.`,
+      `\nMigration successfully queued, check ${colors.bold.underline('zapier-platform jobs')} to track the status. Migrations usually take between 5-10 minutes.`,
     );
   }
 }
@@ -184,24 +184,24 @@ MigrateCommand.args = {
 
 MigrateCommand.skipValidInstallCheck = true;
 MigrateCommand.examples = [
-  'zapier migrate 1.0.0 1.0.1',
-  'zapier migrate 1.0.1 2.0.0 10',
-  'zapier migrate 2.0.0 2.0.1 --user=user@example.com',
-  'zapier migrate 2.0.0 2.0.1 --account=account@example.com',
+  'zapier-platform migrate 1.0.0 1.0.1',
+  'zapier-platform migrate 1.0.1 2.0.0 10',
+  'zapier-platform migrate 2.0.0 2.0.1 --user=user@example.com',
+  'zapier-platform migrate 2.0.0 2.0.1 --account=account@example.com',
 ];
 MigrateCommand.description = `Migrate a percentage of users or a single user from one version of your integration to another.
 
-Start a migration to move users between different versions of your integration. You may also "revert" by simply swapping the from/to verion strings in the command line arguments (i.e. \`zapier migrate 1.0.1 1.0.0\`).
+Start a migration to move users between different versions of your integration. You may also "revert" by simply swapping the from/to verion strings in the command line arguments (i.e. \`zapier-platform migrate 1.0.1 1.0.0\`).
 
-**Only use this command to migrate users between non-breaking versions, use \`zapier deprecate\` if you have breaking changes!**
+**Only use this command to migrate users between non-breaking versions, use \`zapier-platform deprecate\` if you have breaking changes!**
 
-Migration time varies based on the number of affected Zaps. Be patient and check \`zapier jobs\` to track the status. Or use \`zapier history\` if you want to see older jobs.
+Migration time varies based on the number of affected Zaps. Be patient and check \`zapier-platform jobs\` to track the status. Or use \`zapier-platform history\` if you want to see older jobs.
 
 Since a migration is only for non-breaking changes, users are not emailed about the update/migration. It will be a transparent process for them.
 
 We recommend migrating a small subset of users first, via the percent argument, then watching error logs of the new version for any sort of odd behavior. When you feel confident there are no bugs, go ahead and migrate everyone. If you see unexpected errors, you can revert.
 
-You can migrate a specific user's Zaps by using \`--user\` (i.e. \`zapier migrate 1.0.0 1.0.1 --user=user@example.com\`). This will migrate Zaps that are private for that user. Zaps that are
+You can migrate a specific user's Zaps by using \`--user\` (i.e. \`zapier-platform migrate 1.0.0 1.0.1 --user=user@example.com\`). This will migrate Zaps that are private for that user. Zaps that are
 
   - [shared across the team](https://help.zapier.com/hc/en-us/articles/8496277647629),
   - [shared app connections](https://help.zapier.com/hc/en-us/articles/8496326497037-Share-app-connections-with-your-team), or
@@ -209,7 +209,7 @@ You can migrate a specific user's Zaps by using \`--user\` (i.e. \`zapier migrat
 
 will **not** be migrated.
 
-Alternatively, you can pass the \`--account\` flag, (i.e. \`zapier migrate 1.0.0 1.0.1 --account=account@example.com\`). This will migrate all Zaps owned by the user, Private & Shared, within all accounts for which the specified user is a member.
+Alternatively, you can pass the \`--account\` flag, (i.e. \`zapier-platform migrate 1.0.0 1.0.1 --account=account@example.com\`). This will migrate all Zaps owned by the user, Private & Shared, within all accounts for which the specified user is a member.
 
 **The \`--account\` flag should be used cautiously as it can break shared Zaps for other users in Team or Enterprise accounts.**
 

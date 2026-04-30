@@ -267,7 +267,7 @@ class ZapierBaseCommand extends Command {
     }));
     const visibleArgv = argv.filter((arg) => !arg.hidden);
 
-    return ['zapier', name, ...visibleArgv.map(formatArg)].join(' ');
+    return ['zapier-platform', name, ...visibleArgv.map(formatArg)].join(' ');
   }
 
   // this is fine for now but we'll want to hack into https://github.com/oclif/plugin-help/blob/master/src/command.ts at some point
