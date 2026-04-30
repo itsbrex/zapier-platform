@@ -1,3 +1,7 @@
+## 4.0.8
+
+- :hammer: Bump `@xmldom/xmldom` from 0.8.11 to 0.8.13 ([#1286](https://github.com/zapier/zapier-platform/pull/1286))
+
 ## 4.0.7
 
 - :hammer: Bump `underscore` from 1.13.7 to 1.13.8 ([#1256](https://github.com/zapier/zapier-platform/pull/1256))
