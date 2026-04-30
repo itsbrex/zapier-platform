@@ -31,7 +31,7 @@ class VersionsCommand extends BaseCommand {
         ['Updated at', 'last_changed'],
       ],
       emptyMessage:
-        'No versions to show. Try adding one with the `zapier push` command',
+        'No versions to show. Try adding one with the `zapier-platform push` command',
     });
 
     if (versions.map((v) => v.user_count).filter((c) => c === null).length) {

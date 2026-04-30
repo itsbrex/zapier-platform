@@ -104,9 +104,12 @@ ClearCacheCommand.description = `Clear the cache data for a major version.
 
 This command clears the cache data for a major version of your integration.
 The job will be run in the background and may take some time to complete.
-You can check \`zapier history\` to see the job status.
+You can check \`zapier-platform history\` to see the job status.
 `;
-ClearCacheCommand.examples = [`zapier cache:clear`, `zapier cache:clear 2`];
+ClearCacheCommand.examples = [
+  `zapier-platform cache:clear`,
+  `zapier-platform cache:clear 2`,
+];
 ClearCacheCommand.skipValidInstallCheck = true;
 ClearCacheCommand.hide = true;
 

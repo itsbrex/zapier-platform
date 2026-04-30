@@ -212,4 +212,17 @@ describe('BaseCommand', () => {
       should(stdout).startWith(MESSAGE);
     });
   });
+
+  describe('markdownHelp', () => {
+    it('should use zapier-platform as the command name in usage', () => {
+      class SimpleCommand extends TestBaseCommand {
+        async perform() {}
+      }
+      SimpleCommand.description = 'A test command';
+      SimpleCommand.flags = buildFlags();
+
+      const output = SimpleCommand.markdownHelp('test');
+      should(output).containEql('**Usage**: `zapier-platform test`');
+    });
+  });
 });

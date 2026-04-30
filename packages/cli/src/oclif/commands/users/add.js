@@ -49,12 +49,12 @@ UsersAddCommand.flags = buildFlags({
   },
 });
 UsersAddCommand.examples = [
-  'zapier users:add bruce@wayne.com',
-  'zapier users:add alfred@wayne.com 1.2.3',
+  'zapier-platform users:add bruce@wayne.com',
+  'zapier-platform users:add alfred@wayne.com 1.2.3',
 ];
 UsersAddCommand.description = `Add a user to some or all versions of your integration.
 
-When this command is run, we'll send an email to the user inviting them to try your integration. You can track the status of that invite using the \`zapier users:get\` command.
+When this command is run, we'll send an email to the user inviting them to try your integration. You can track the status of that invite using the \`zapier-platform users:get\` command.
 
 Invited users will be able to see your integration's name, logo, and description. They'll also be able to create Zaps using any available triggers and actions.`;
 UsersAddCommand.aliases = ['users:invite'];

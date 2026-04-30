@@ -63,7 +63,7 @@ CanaryDeleteCommand.args = {
   }),
 };
 CanaryDeleteCommand.description = 'Delete an active canary deployment';
-CanaryDeleteCommand.examples = ['zapier canary:delete 1.0.0 1.1.0'];
+CanaryDeleteCommand.examples = ['zapier-platform canary:delete 1.0.0 1.1.0'];
 CanaryDeleteCommand.skipValidInstallCheck = true;
 
 module.exports = CanaryDeleteCommand;

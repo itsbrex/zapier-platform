@@ -156,7 +156,7 @@ The resulting CLI integration will be identical to its Visual Builder version an
 
 If you re-run this command on an existing directory it will leave existing files alone and not clobber them.
 
-You'll need to do a \`zapier push\` before the new version is visible in the editor, but otherwise you're good to go.`;
+You'll need to do a \`zapier-platform push\` before the new version is visible in the editor, but otherwise you're good to go.`;
 
 ConvertCommand.skipValidInstallCheck = true;
 

@@ -24,7 +24,7 @@ class CanaryCreateCommand extends ZapierBaseCommand {
       this
         .log(`A canary deployment already exists from version ${existingCanary.from_version} to version ${existingCanary.to_version}, there are ${secondsRemaining} seconds remaining.
         
-If you would like to stop this canary now, run \`zapier canary:delete ${existingCanary.from_version} ${existingCanary.to_version}\``);
+If you would like to stop this canary now, run \`zapier-platform canary:delete ${existingCanary.from_version} ${existingCanary.to_version}\``);
       return;
     }
 
@@ -126,7 +126,7 @@ CanaryCreateCommand.args = {
 
 CanaryCreateCommand.description = `Create a new canary deployment, diverting a specified percentage of traffic from one version to another for a specified duration.
 
-Only one canary can be active at the same time. You can run \`zapier canary:list\` to check. If you would like to create a new canary with different parameters, you can wait for the canary to finish, or delete it using \`zapier canary:delete a.b.c x.y.z\`.
+Only one canary can be active at the same time. You can run \`zapier-platform canary:list\` to check. If you would like to create a new canary with different parameters, you can wait for the canary to finish, or delete it using \`zapier-platform canary:delete a.b.c x.y.z\`.
 
 To canary traffic for a specific user, use the --user flag.
 
@@ -134,15 +134,15 @@ To canary traffic for an entire account, use the --account-id. Note: this scenar
 
 To canary traffic for a specific user within a specific account, use both --user and --account-id flags.
 
-Note: this is similar to \`zapier migrate\` but different in that this is temporary and will "revert" the changes once the specified duration is expired.
+Note: this is similar to \`zapier-platform migrate\` but different in that this is temporary and will "revert" the changes once the specified duration is expired.
 
 **Only use this command to canary traffic between non-breaking versions!**`;
 
 CanaryCreateCommand.examples = [
-  'zapier canary:create 1.0.0 1.1.0 -p 10 -d 3600',
-  'zapier canary:create 2.0.0 2.1.0 --percent 25 --duration 1800 --user user@example.com',
-  'zapier canary:create 2.0.0 2.1.0 -p 15 -d 7200 -a 12345 -u user@example.com',
-  'zapier canary:create 2.0.0 2.1.0 -p 15 -d 7200 -a 12345',
+  'zapier-platform canary:create 1.0.0 1.1.0 -p 10 -d 3600',
+  'zapier-platform canary:create 2.0.0 2.1.0 --percent 25 --duration 1800 --user user@example.com',
+  'zapier-platform canary:create 2.0.0 2.1.0 -p 15 -d 7200 -a 12345 -u user@example.com',
+  'zapier-platform canary:create 2.0.0 2.1.0 -p 15 -d 7200 -a 12345',
 ];
 CanaryCreateCommand.skipValidInstallCheck = true;
 

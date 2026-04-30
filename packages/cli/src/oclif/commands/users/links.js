@@ -33,7 +33,7 @@ class UsersLinksCommand extends ZapierBaseCommand {
     });
 
     this.log(
-      '\nTo invite a specific user by email, use the `zapier users:add` command.',
+      '\nTo invite a specific user by email, use the `zapier-platform users:add` command.',
     );
   }
 }

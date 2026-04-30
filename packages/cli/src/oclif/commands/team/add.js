@@ -83,9 +83,9 @@ These users come in three levels:
 Team members can be freely added and removed.`;
 
 TeamAddCommand.examples = [
-  'zapier team:add bruce@wayne.com admin',
-  'zapier team:add robin@wayne.com collaborator "Hey Robin, check out this app."',
-  'zapier team:add alfred@wayne.com subscriber "Hey Alfred, check out this app."',
+  'zapier-platform team:add bruce@wayne.com admin',
+  'zapier-platform team:add robin@wayne.com collaborator "Hey Robin, check out this app."',
+  'zapier-platform team:add alfred@wayne.com subscriber "Hey Alfred, check out this app."',
 ];
 TeamAddCommand.aliases = ['team:invite'];
 TeamAddCommand.skipValidInstallCheck = true;

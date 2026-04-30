@@ -40,7 +40,7 @@ AnalyticsCommand.flags = buildFlags({
     }),
   },
 });
-AnalyticsCommand.examples = ['zapier analytics --mode enabled'];
+AnalyticsCommand.examples = ['zapier-platform analytics --mode enabled'];
 AnalyticsCommand.description = `Show the status of the analytics that are collected. Also used to change what is collected.`;
 AnalyticsCommand.skipValidInstallCheck = true;
 
