@@ -105,8 +105,8 @@
     "additionalVersionFlags": [
       "-v"
     ],
-    "bin": "zapier",
-    "dirname": "zapier",
+    "bin": "zapier-platform",
+    "dirname": "zapier-platform",
     "plugins": [
       "@oclif/plugin-autocomplete",
       "@oclif/plugin-help",
