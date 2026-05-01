@@ -21,17 +21,18 @@ const errors = require('../errors');
 // Opaque sentinels survive core's curly-stripping (normalizeEmptyParamFields)
 // and any stringification middleware does. We embed them into placeholder
 // authData / proxied process.env, then convert back to {{curlies}} on the
-// way out (cleanTemplate). Colons separate the marker from the key — JS
-// identifier keys cannot contain colons, so the parse is unambiguous even
-// when keys contain consecutive underscores.
-const AUTH_SENTINEL_OPEN = '__placeholder_auth:';
-const ENV_SENTINEL_OPEN = '__placeholder_env:';
-const SENTINEL_CLOSE = ':end_placeholder__';
+// way out (cleanTemplate). Lowercase-underscore markers are URL-safe in
+// hostnames AND querystrings, so a sentinel survives substitution into
+// any URL position without breaking `new URL(...)` parsing — which is
+// what extractTemplate uses to recover params after addQueryParams.
+const AUTH_SENTINEL_OPEN = '__placeholder_auth__';
+const ENV_SENTINEL_OPEN = '__placeholder_env__';
+const SENTINEL_CLOSE = '__end_placeholder__';
 const wrapAuthSentinel = (key) =>
   `${AUTH_SENTINEL_OPEN}${key}${SENTINEL_CLOSE}`;
 const wrapEnvSentinel = (key) => `${ENV_SENTINEL_OPEN}${key}${SENTINEL_CLOSE}`;
-const AUTH_SENTINEL_RE = /__placeholder_auth:([^:]*):end_placeholder__/g;
-const ENV_SENTINEL_RE = /__placeholder_env:([^:]*):end_placeholder__/g;
+const AUTH_SENTINEL_RE = /__placeholder_auth__(.+?)__end_placeholder__/g;
+const ENV_SENTINEL_RE = /__placeholder_env__(.+?)__end_placeholder__/g;
 
 // Walk a template and replace sentinels with their {{curly}} equivalents.
 // Returns a new object; the input is not mutated.
