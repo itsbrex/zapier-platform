@@ -486,6 +486,50 @@ describe('getAuthTemplate', () => {
       result.template.params.should.not.have.property('from_test');
     });
 
+    it('captures requestTemplate params whose key differs from the authData field', async () => {
+      const beforeRequest = (req, z, bundle) => {
+        req.headers.Authorization = `Bearer ${bundle.authData.access_token}`;
+        return req;
+      };
+      const result = await run({
+        authentication: {
+          type: 'oauth2',
+          test: STUB_TEST,
+          fields: [{ key: 'access_token' }],
+        },
+        requestTemplate: {
+          params: { api_key: '{{bundle.authData.access_token}}' },
+        },
+        beforeRequest: [beforeRequest],
+      });
+      result.supported.should.be.true();
+      result.template.headers.Authorization.should.eql(
+        'Bearer {{bundle.authData.access_token}}',
+      );
+      result.template.params.api_key.should.eql(
+        '{{bundle.authData.access_token}}',
+      );
+    });
+
+    it('captures params when test URL embeds an authData field in the hostname', async () => {
+      const result = await run({
+        authentication: {
+          type: 'custom',
+          fields: [{ key: 'subdomain' }],
+          test: {
+            url: 'https://{{bundle.authData.subdomain}}.example.com/me',
+            headers: { 'X-Sub': '{{bundle.authData.subdomain}}' },
+            params: { tenant: '{{bundle.authData.subdomain}}' },
+          },
+        },
+      });
+      result.supported.should.be.true();
+      result.template.headers['X-Sub'].should.eql(
+        '{{bundle.authData.subdomain}}',
+      );
+      result.template.params.tenant.should.eql('{{bundle.authData.subdomain}}');
+    });
+
     it('returns beforeRequest_error when the pipeline throws on the test object', async () => {
       const beforeRequest = () => {
         throw new Error('boom');
