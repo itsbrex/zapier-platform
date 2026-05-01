@@ -18,9 +18,50 @@ const errors = require('../errors');
 
 // --- Helpers ---
 
+// Opaque sentinels survive core's curly-stripping (normalizeEmptyParamFields)
+// and any stringification middleware does. We embed them into placeholder
+// authData / proxied process.env, then convert back to {{curlies}} on the
+// way out (cleanTemplate). Colons separate the marker from the key — JS
+// identifier keys cannot contain colons, so the parse is unambiguous even
+// when keys contain consecutive underscores.
+const AUTH_SENTINEL_OPEN = '__placeholder_auth:';
+const ENV_SENTINEL_OPEN = '__placeholder_env:';
+const SENTINEL_CLOSE = ':end_placeholder__';
+const wrapAuthSentinel = (key) =>
+  `${AUTH_SENTINEL_OPEN}${key}${SENTINEL_CLOSE}`;
+const wrapEnvSentinel = (key) => `${ENV_SENTINEL_OPEN}${key}${SENTINEL_CLOSE}`;
+const AUTH_SENTINEL_RE = /__placeholder_auth:([^:]*):end_placeholder__/g;
+const ENV_SENTINEL_RE = /__placeholder_env:([^:]*):end_placeholder__/g;
+
+// Walk a template and replace sentinels with their {{curly}} equivalents.
+// Returns a new object; the input is not mutated.
+const sentinelsToCurlies = (value) => {
+  if (typeof value === 'string') {
+    return value
+      .replace(AUTH_SENTINEL_RE, (_, k) => `{{bundle.authData.${k}}}`)
+      .replace(ENV_SENTINEL_RE, (_, k) => `{{process.env.${k}}}`);
+  }
+  if (Array.isArray(value)) {
+    return value.map(sentinelsToCurlies);
+  }
+  if (value && typeof value === 'object') {
+    const out = {};
+    for (const [k, v] of Object.entries(value)) {
+      out[k] = sentinelsToCurlies(v);
+    }
+    return out;
+  }
+  return value;
+};
+
 const hasAuthPlaceholders = (obj) => {
   const s = JSON.stringify(obj);
-  return /\{\{\s*bundle\.authData\./.test(s) || /\{\{\s*process\.env\./.test(s);
+  return (
+    s.includes(AUTH_SENTINEL_OPEN) ||
+    s.includes(ENV_SENTINEL_OPEN) ||
+    /\{\{\s*bundle\.authData\./.test(s) ||
+    /\{\{\s*process\.env\./.test(s)
+  );
 };
 
 // Check if auth field placeholders were consumed by encoding (e.g.,
@@ -49,45 +90,18 @@ const supportedResult = (authType, source, template, auth) => {
   return { supported: true, authType, source, template };
 };
 
-// Core's normalizeEmptyParamFields strips {{curlies}} from param values
-// (designed for production where curlies are already resolved). In our
-// placeholder survival test, this destroys placeholders. This function
-// restores them by checking if empty param values correspond to known
-// auth fields from placeholderAuthData.
-const restoreStrippedParams = (template, placeholderAuthData) => {
-  if (!template.params) {
-    return;
-  }
-  for (const [key, value] of Object.entries(template.params)) {
-    if (value === '' || value === null || value === undefined) {
-      // Check if this key matches an authData field
-      const placeholder = placeholderAuthData[key];
-      if (
-        placeholder &&
-        typeof placeholder === 'string' &&
-        placeholder.startsWith('{{')
-      ) {
-        template.params[key] = placeholder;
-      } else {
-        // Empty param that doesn't match any auth field — drop it.
-        // These come from trigger URLs whose curlies were stripped.
-        delete template.params[key];
-      }
-    }
-  }
-};
-
-// Remove empty headers/params/body from a template object.
+// Remove empty headers/params/body from a template object and convert
+// any internal sentinels back to user-facing {{curly}} placeholders.
 const cleanTemplate = (template) => {
   const cleaned = {};
   if (template.headers && Object.keys(template.headers).length > 0) {
-    cleaned.headers = template.headers;
+    cleaned.headers = sentinelsToCurlies(template.headers);
   }
   if (template.params && Object.keys(template.params).length > 0) {
-    cleaned.params = template.params;
+    cleaned.params = sentinelsToCurlies(template.params);
   }
   if (template.body && Object.keys(template.body).length > 0) {
-    cleaned.body = template.body;
+    cleaned.body = sentinelsToCurlies(template.body);
   }
   return cleaned;
 };
@@ -107,46 +121,49 @@ const SESSION_AUTH_COMMON_KEYS = [
   'token',
 ];
 
-// Build placeholder authData where each value IS its own placeholder string.
-// When prepareRequest runs curlies resolution, placeholders resolve to themselves.
+// Build placeholder authData where each value is an opaque sentinel
+// string. Sentinels survive core's normalize/curly-stripping and any
+// stringification middleware does, so the captured request still
+// contains them verbatim. cleanTemplate converts sentinels back to
+// {{bundle.authData.X}} on the way out.
 const buildPlaceholderAuthData = (auth) => {
   const authData = {};
 
   for (const field of auth.fields || []) {
     if (field.key) {
-      authData[field.key] = `{{bundle.authData.${field.key}}}`;
+      authData[field.key] = wrapAuthSentinel(field.key);
     }
   }
 
   // Standard fields for known auth types (if not already declared)
   if (auth.type === 'basic') {
-    authData.username = authData.username || '{{bundle.authData.username}}';
-    authData.password = authData.password || '{{bundle.authData.password}}';
+    authData.username = authData.username || wrapAuthSentinel('username');
+    authData.password = authData.password || wrapAuthSentinel('password');
   }
   if (auth.type === 'oauth2') {
     authData.access_token =
-      authData.access_token || '{{bundle.authData.access_token}}';
+      authData.access_token || wrapAuthSentinel('access_token');
     if (
       auth.oauth2Config &&
       auth.oauth2Config.autoRefresh &&
       auth.oauth2Config.refreshAccessToken
     ) {
       authData.refresh_token =
-        authData.refresh_token || '{{bundle.authData.refresh_token}}';
+        authData.refresh_token || wrapAuthSentinel('refresh_token');
     }
   }
   if (auth.type === 'oauth1') {
     authData.oauth_token =
-      authData.oauth_token || '{{bundle.authData.oauth_token}}';
+      authData.oauth_token || wrapAuthSentinel('oauth_token');
     authData.oauth_token_secret =
-      authData.oauth_token_secret || '{{bundle.authData.oauth_token_secret}}';
+      authData.oauth_token_secret || wrapAuthSentinel('oauth_token_secret');
   }
   if (
     auth.type === 'custom' &&
     auth.customConfig &&
     auth.customConfig.sendCode != null
   ) {
-    authData.code = authData.code || '{{bundle.authData.code}}';
+    authData.code = authData.code || wrapAuthSentinel('code');
   }
   // Session auth has no schema-defined standard fields, but some apps
   // stash their token under conventional undeclared names (set at
@@ -155,7 +172,7 @@ const buildPlaceholderAuthData = (auth) => {
   // template.
   if (auth.type === 'session') {
     for (const key of SESSION_AUTH_COMMON_KEYS) {
-      authData[key] = authData[key] || `{{bundle.authData.${key}}}`;
+      authData[key] = authData[key] || wrapAuthSentinel(key);
     }
   }
 
@@ -228,7 +245,7 @@ const withProxiedEnv = async (fn) => {
         if (typeof prop === 'symbol') {
           return undefined;
         }
-        return `{{process.env.${prop}}}`;
+        return wrapEnvSentinel(prop);
       },
     });
   }
@@ -298,13 +315,13 @@ const extractTemplate = (req) => {
     try {
       const parsed = new URL(req.url);
       for (const [k, v] of parsed.searchParams.entries()) {
-        // Include params with auth placeholders or empty values (which
-        // may have had curlies stripped by normalizeEmptyParamFields —
-        // restoreStrippedParams will fix them later). Skip params with
-        // non-placeholder, non-empty values (e.g., trigger-specific
-        // filter params).
+        // Keep params that carry auth placeholders (sentinels survive
+        // normalize; legacy {{curlies}} may also appear in user-written
+        // requestTemplates that bypass substitution). Skip non-auth
+        // literals like trigger-specific filter params.
         if (
-          v === '' ||
+          (typeof v === 'string' && v.includes(AUTH_SENTINEL_OPEN)) ||
+          (typeof v === 'string' && v.includes(ENV_SENTINEL_OPEN)) ||
           /\{\{bundle\.authData\./.test(v) ||
           /\{\{process\.env\./.test(v)
         ) {
@@ -646,15 +663,11 @@ const getAuthTemplate = async (compiledApp, input) => {
       }
       // beforeRequest errored but auth.test exists — fall through
     } else {
-      restoreStrippedParams(template, placeholderAuthData);
-
       if (hasAuthPlaceholders(template)) {
         // Divergence check: authData proxy
         const proxyAuthData = buildProxyAuthData(placeholderAuthData);
         const { template: proxyTemplate, error: proxyError } =
           await runMiddlewareSurvival(compiledApp, input, auth, proxyAuthData);
-
-        restoreStrippedParams(proxyTemplate, proxyAuthData);
 
         if (proxyError || !templatesEqual(template, proxyTemplate)) {
           if (!auth.test) {
@@ -773,8 +786,6 @@ const getAuthTemplate = async (compiledApp, input) => {
       body: testReq.body,
     };
 
-    restoreStrippedParams(template, placeholderAuthData);
-
     if (hasAuthPlaceholders(template)) {
       // Divergence checks: authData proxy + URL probe
       const proxyAuthData = buildProxyAuthData(placeholderAuthData);
@@ -783,8 +794,6 @@ const getAuthTemplate = async (compiledApp, input) => {
           url: testReq.url || 'https://example.com',
           reqOverrides: testReqOverrides,
         });
-
-      restoreStrippedParams(proxyTemplate, proxyAuthData);
 
       if (proxyError || !templatesEqual(template, proxyTemplate)) {
         return {
@@ -833,32 +842,10 @@ const getAuthTemplate = async (compiledApp, input) => {
         };
       }
 
-      // Merge back any auth-relevant params from the test object that were
-      // stripped by core's normalizeEmptyParamFields (which removes curlies
-      // from param values). Only include params whose values contain auth
-      // placeholders — non-placeholder literals (e.g., test-specific markers
-      // like `from_zapier: 'true'`) are not part of the auth template.
-      const finalTemplate = cleanTemplate(template);
-      if (testReq.params && Object.keys(testReq.params).length > 0) {
-        const authParams = {};
-        for (const [k, v] of Object.entries(testReq.params)) {
-          if (
-            typeof v === 'string' &&
-            (/\{\{\s*bundle\.authData\./.test(v) ||
-              /\{\{\s*process\.env\./.test(v))
-          ) {
-            authParams[k] = v;
-          }
-        }
-        if (Object.keys(authParams).length > 0) {
-          finalTemplate.params = { ...finalTemplate.params, ...authParams };
-        }
-      }
-
       return supportedResult(
         authType,
         'authentication.test',
-        cleanTemplate(finalTemplate),
+        cleanTemplate(template),
         auth,
       );
     }
@@ -910,8 +897,6 @@ const getAuthTemplate = async (compiledApp, input) => {
       }
       // beforeRequest may have a template — handled at the end
     } else {
-      restoreStrippedParams(template, placeholderAuthData);
-
       if (hasAuthPlaceholders(template)) {
         // Divergence check: run again with Proxy authData
         const proxyAuthData = buildProxyAuthData(placeholderAuthData);
@@ -922,8 +907,6 @@ const getAuthTemplate = async (compiledApp, input) => {
             compiledApp,
             input,
           );
-
-        restoreStrippedParams(proxyTemplate, proxyAuthData);
 
         if (proxyError || !templatesEqual(template, proxyTemplate)) {
           return {
