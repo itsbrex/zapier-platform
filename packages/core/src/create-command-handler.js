@@ -4,6 +4,8 @@ const schemaTools = require('./tools/schema');
 
 const execute = require('./execute');
 const executeRequest = require('./execute-request');
+const getAuthTemplate = require('./auth-template/get-auth-template');
+const renderAuthTemplate = require('./auth-template/render-auth-template');
 const { handleError } = require('./errors');
 
 const commandHandlers = {
@@ -11,6 +13,8 @@ const commandHandlers = {
   validate: schemaTools.validateApp,
   definition: schemaTools.serializeApp,
   request: (app, input) => executeRequest(input),
+  getAuthTemplate,
+  renderAuthTemplate,
 };
 
 /*

@@ -17,6 +17,8 @@ const {
   appendEnv,
 } = require('./env');
 const { startAuth, testAuth, getAuthLabel, refreshAuth } = require('./auth');
+const { templateAuth } = require('./auth/template');
+const { renderAuth } = require('./auth/render');
 const { invokeAction } = require('./action');
 const { promptForAuthentication } = require('./prompts');
 
@@ -119,7 +121,14 @@ class InvokeCommand extends BaseCommand {
         throw new Error('You must specify ACTIONKEY in non-interactive mode.');
       }
       if (context.actionType === 'auth') {
-        const actionKeys = ['label', 'refresh', 'start', 'test'];
+        const actionKeys = [
+          'label',
+          'refresh',
+          'render',
+          'start',
+          'template',
+          'test',
+        ];
         context.actionKey = await this.promptWithList(
           'Which auth operation would you like to invoke?',
           actionKeys,
@@ -176,6 +185,18 @@ class InvokeCommand extends BaseCommand {
       }
     }
 
+    // Reject unsupported flags early for template/render commands
+    if (
+      context.actionType === 'auth' &&
+      (context.actionKey === 'template' || context.actionKey === 'render') &&
+      (context.remote || context.authId)
+    ) {
+      throw new Error(
+        `The \`--remote\` and \`--authentication-id\` flags are not applicable to \`auth ${context.actionKey}\`. ` +
+          'This command runs locally using auth data from the .env file.',
+      );
+    }
+
     if (context.authId && !context.remote) {
       // Fill authData with curlies if we're in relay mode
       const authFields = context.appDefinition.authentication.fields || [];
@@ -190,6 +211,31 @@ class InvokeCommand extends BaseCommand {
     // assumes there are values in bundle.authData. Loading from .env at least
     // gives the developer an option to override the values in bundle.authData.
     context.authData = { ...context.authData, ...loadAuthDataFromEnv() };
+
+    // `auth render` accepts a positional JSON-encoded authData arg whose
+    // values take precedence over .env. Useful for one-off rendering
+    // without touching the .env file.
+    if (this.args.authData) {
+      if (context.actionType !== 'auth' || context.actionKey !== 'render') {
+        throw new Error(
+          'The authData positional argument is only supported by `auth render`.',
+        );
+      }
+      let parsed;
+      try {
+        parsed = JSON.parse(this.args.authData);
+      } catch (err) {
+        throw new Error(`Failed to parse authData as JSON: ${err.message}`);
+      }
+      if (
+        parsed === null ||
+        typeof parsed !== 'object' ||
+        Array.isArray(parsed)
+      ) {
+        throw new Error('authData must be a JSON object.');
+      }
+      context.authData = { ...context.authData, ...parsed };
+    }
 
     if (context.actionType === 'auth') {
       switch (context.actionKey) {
@@ -253,10 +299,20 @@ class InvokeCommand extends BaseCommand {
           }
           return;
         }
+        case 'template': {
+          const output = await templateAuth(context);
+          console.log(JSON.stringify(output, null, 2));
+          return;
+        }
+        case 'render': {
+          const output = await renderAuth(context);
+          console.log(JSON.stringify(output, null, 2));
+          return;
+        }
         default:
           throw new Error(
             `Unknown auth operation "${context.actionKey}". ` +
-              'The options are "label", "refresh", "start", and "test". \n',
+              'The options are "label", "refresh", "render", "start", "template", and "test". \n',
           );
       }
     } else {
@@ -377,6 +433,13 @@ InvokeCommand.args = {
     description:
       'The trigger/action key you want to invoke. If ACTIONTYPE is "auth", this can be "label", "refresh", "start", or "test".',
   }),
+  authData: Args.string({
+    description:
+      'Only used by `auth render`. JSON-encoded object with auth field values (e.g. `\'{"access_token":"a_token"}\'`). Values here take precedence over the .env file.',
+    // Don't auto-fill from piped stdin — that breaks `--inputData @-` usage
+    // for non-auth actions, which pipes into stdin for inputData.
+    ignoreStdin: true,
+  }),
 };
 
 InvokeCommand.examples = [
@@ -394,6 +457,7 @@ InvokeCommand.examples = [
   'zapier-platform invoke trigger new_recipe --remote',
   'zapier-platform invoke trigger new_recipe -r -a 12345',
   'zapier-platform invoke -r -v 2.0.0 -a -',
+  `zapier-platform invoke auth render '{"access_token":"a_token"}'`,
 ];
 InvokeCommand.description = `Invoke an authentication method, a trigger, or a create/search action locally or remotely.
 
