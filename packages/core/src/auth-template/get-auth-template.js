@@ -21,27 +21,22 @@ const errors = require('../errors');
 
 // Opaque sentinels survive core's curly-stripping (normalizeEmptyParamFields)
 // and any stringification middleware does. We embed them into placeholder
-// authData / proxied process.env, then convert back to {{curlies}} on the
+// authData, then convert back to {{curlies}} on the
 // way out (cleanTemplate). Lowercase-underscore markers are URL-safe in
 // hostnames AND querystrings, so a sentinel survives substitution into
 // any URL position without breaking `new URL(...)` parsing — which is
 // what extractTemplate uses to recover params after addQueryParams.
 const AUTH_SENTINEL_OPEN = '__placeholder_auth__';
-const ENV_SENTINEL_OPEN = '__placeholder_env__';
 const SENTINEL_CLOSE = '__end_placeholder__';
 const wrapAuthSentinel = (key) =>
   `${AUTH_SENTINEL_OPEN}${key}${SENTINEL_CLOSE}`;
-const wrapEnvSentinel = (key) => `${ENV_SENTINEL_OPEN}${key}${SENTINEL_CLOSE}`;
 const AUTH_SENTINEL_RE = /__placeholder_auth__(.+?)__end_placeholder__/g;
-const ENV_SENTINEL_RE = /__placeholder_env__(.+?)__end_placeholder__/g;
 
 // Walk a template and replace sentinels with their {{curly}} equivalents.
 // Returns a new object; the input is not mutated.
 const sentinelsToCurlies = (value) => {
   if (typeof value === 'string') {
-    return value
-      .replace(AUTH_SENTINEL_RE, (_, k) => `{{bundle.authData.${k}}}`)
-      .replace(ENV_SENTINEL_RE, (_, k) => `{{process.env.${k}}}`);
+    return value.replace(AUTH_SENTINEL_RE, (_, k) => `{{bundle.authData.${k}}}`);
   }
   if (Array.isArray(value)) {
     return value.map(sentinelsToCurlies);
@@ -60,7 +55,6 @@ const hasAuthPlaceholders = (obj) => {
   const s = JSON.stringify(obj);
   return (
     s.includes(AUTH_SENTINEL_OPEN) ||
-    s.includes(ENV_SENTINEL_OPEN) ||
     /\{\{\s*bundle\.authData\./.test(s) ||
     /\{\{\s*process\.env\./.test(s)
   );
@@ -229,7 +223,9 @@ const buildProxyAuthData = (placeholderAuthData) =>
 const templatesEqual = (a, b) =>
   JSON.stringify(cleanTemplate(a)) === JSON.stringify(cleanTemplate(b));
 
-// Run fn with process.env proxied to return placeholders for unknown vars.
+// Run fn with process.env proxied so an undeclared variable reads as undefined,
+// matching production (the AppVersion env is loaded during capture, so a var
+// absent from it is undefined, not a placeholder).
 // Concurrent withProxiedEnv calls (e.g., parallel URL probe runs) must
 // share the same proxy — naive "save current; restore current" would let
 // the inner call save the outer's Proxy and "restore" to it, leaking the
@@ -244,10 +240,7 @@ const withProxiedEnv = async (fn) => {
         if (prop in target) {
           return target[prop];
         }
-        if (typeof prop === 'symbol') {
-          return undefined;
-        }
-        return wrapEnvSentinel(prop);
+        return undefined;
       },
     });
   }
@@ -352,7 +345,6 @@ const extractTemplate = (req) => {
         // literals like trigger-specific filter params.
         if (
           (typeof v === 'string' && v.includes(AUTH_SENTINEL_OPEN)) ||
-          (typeof v === 'string' && v.includes(ENV_SENTINEL_OPEN)) ||
           /\{\{bundle\.authData\./.test(v) ||
           /\{\{process\.env\./.test(v)
         ) {

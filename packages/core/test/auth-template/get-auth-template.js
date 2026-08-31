@@ -21,6 +21,32 @@ const run = (compiledApp) =>
 
 const STUB_TEST = { url: 'https://example.com' };
 
+// Set variables on process.env for fn, then restore. Simulates the AppVersion
+// env being loaded during production capture (local invoke doesn't load it).
+const withStubbedEnv = async (vars, fn) => {
+  const saved = new Map();
+  for (const [key, value] of Object.entries(vars)) {
+    saved.set(
+      key,
+      Object.prototype.hasOwnProperty.call(process.env, key)
+        ? process.env[key]
+        : undefined,
+    );
+    process.env[key] = value;
+  }
+  try {
+    return await fn();
+  } finally {
+    for (const [key, prior] of saved) {
+      if (prior === undefined) {
+        delete process.env[key];
+      } else {
+        process.env[key] = prior;
+      }
+    }
+  }
+};
+
 describe('getAuthTemplate', () => {
   describe('early returns', () => {
     it('returns supported with empty template when no authentication', async () => {
@@ -317,30 +343,83 @@ describe('getAuthTemplate', () => {
       result.reason.should.eql('auth_fields_consumed');
     });
 
-    it('does not flag auth_fields_consumed when no fields are declared', async () => {
-      // App uses only process.env (server-side secret), no declared fields.
-      // Placeholders survive (the env var) — should be supported.
+    it('resolves an undeclared process.env var to undefined so a || falls through to authData', async () => {
+      // Procore shape: `process.env.ACCESS_TOKEN || bundle.authData.access_token`.
+      // ACCESS_TOKEN is undeclared, so the || must reach the authData placeholder.
       const beforeRequest = (req, z, bundle) => {
         req.headers = req.headers || {};
-        if (bundle.authData.access_token) {
-          req.headers.Authorization = `Bot ${process.env.BOT_TOKEN}`;
-        }
+        req.headers.Authorization = `Bearer ${
+          process.env.ACCESS_TOKEN || bundle.authData.access_token
+        }`;
         return req;
       };
       const result = await run({
-        authentication: { type: 'oauth2', test: STUB_TEST },
+        authentication: {
+          type: 'oauth2',
+          test: STUB_TEST,
+          fields: [{ key: 'access_token' }],
+        },
         beforeRequest: [beforeRequest],
       });
       result.supported.should.be.true();
-      result.source.should.eql('authentication.test');
       result.template.headers.Authorization.should.eql(
-        'Bot {{process.env.BOT_TOKEN}}',
+        'Bearer {{bundle.authData.access_token}}',
       );
     });
 
-    it('flags auth_fields_consumed when declared fields are gone but process.env survives', async () => {
-      // Declared auth fields are consumed by base64 encoding, but a
-      // server-side env var still survives in another header.
+    it('omits a header whose value is an undeclared process.env var', async () => {
+      // PushPress shape: an undeclared process.env value on the company-id header
+      // resolves to undefined and drops out of the serialized template.
+      const beforeRequest = (req, z, bundle) => {
+        req.headers = req.headers || {};
+        req.headers['api-key'] = bundle.authData.apiKey;
+        req.headers['company-id'] = process.env.PUSHPRESS_COMPANY_ID;
+        return req;
+      };
+      const result = await run({
+        authentication: {
+          type: 'custom',
+          test: STUB_TEST,
+          fields: [{ key: 'apiKey' }],
+        },
+        beforeRequest: [beforeRequest],
+      });
+      result.supported.should.be.true();
+      result.template.headers['api-key'].should.eql('{{bundle.authData.apiKey}}');
+      // undefined-valued headers drop when the template is serialized to JSON.
+      const serialized = JSON.parse(JSON.stringify(result.template));
+      serialized.headers.should.not.have.property('company-id');
+    });
+
+    it('keeps a declared server-side env var and stays supported', async () => {
+      // A declared value is present in process.env during capture, so the proxy
+      // returns it unchanged; the fix only affects undeclared vars.
+      const beforeRequest = (req, z, bundle) => {
+        req.headers = req.headers || {};
+        req.headers.Authorization = `Bearer ${bundle.authData.access_token}`;
+        req.headers['X-Region'] = process.env.SERVER_REGION;
+        return req;
+      };
+      const result = await withStubbedEnv({ SERVER_REGION: 'us-east-1' }, () =>
+        run({
+          authentication: {
+            type: 'oauth2',
+            test: STUB_TEST,
+            fields: [{ key: 'access_token' }],
+          },
+          beforeRequest: [beforeRequest],
+        }),
+      );
+      result.supported.should.be.true();
+      result.template.headers.Authorization.should.eql(
+        'Bearer {{bundle.authData.access_token}}',
+      );
+      result.template.headers['X-Region'].should.eql('us-east-1');
+    });
+
+    it('flags auth_fields_consumed when declared fields are gone but a declared process.env value survives', async () => {
+      // Declared auth fields are consumed by base64 encoding, but a declared
+      // server-side env value survives in another header (not an auth placeholder).
       const beforeRequest = (req, z, bundle) => {
         req.headers = req.headers || {};
         const encoded = Buffer.from(
@@ -350,14 +429,16 @@ describe('getAuthTemplate', () => {
         req.headers['X-App'] = `${process.env.APP_ID}`;
         return req;
       };
-      const result = await run({
-        authentication: {
-          type: 'custom',
-          test: STUB_TEST,
-          fields: [{ key: 'api_key' }, { key: 'api_secret' }],
-        },
-        beforeRequest: [beforeRequest],
-      });
+      const result = await withStubbedEnv({ APP_ID: 'app-123' }, () =>
+        run({
+          authentication: {
+            type: 'custom',
+            test: STUB_TEST,
+            fields: [{ key: 'api_key' }, { key: 'api_secret' }],
+          },
+          beforeRequest: [beforeRequest],
+        }),
+      );
       result.supported.should.be.false();
       result.reason.should.eql('auth_fields_consumed');
     });
