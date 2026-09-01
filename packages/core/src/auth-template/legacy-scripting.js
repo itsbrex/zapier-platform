@@ -29,13 +29,16 @@ const renderAuthMapping = (authMapping, authData) => {
   return result;
 };
 
-const createLegacyBeforeRequest = (app) => {
+const createLegacyBeforeRequest = (app, onDump) => {
   const authType = app.authentication && app.authentication.type;
   const legacy = app.legacy || {};
   const authMapping =
     (legacy.authentication && legacy.authentication.mapping) || {};
   const placement =
     (legacy.authentication && legacy.authentication.placement) || 'header';
+  // An absent mapping is defaulted to {} above, and renderAuthMapping returns
+  // authData wholesale for either. Both shapes dump, so both are reported.
+  const mappingIsEmpty = Object.keys(authMapping).length === 0;
 
   return (req, z, bundle) => {
     const authData = bundle.authData || {};
@@ -57,6 +60,18 @@ const createLegacyBeforeRequest = (app) => {
       }
     } else if (authType === 'session' || authType === 'custom') {
       const rendered = renderAuthMapping(authMapping, authData);
+      // Only session auth is reported. buildPlaceholderAuthData pads session
+      // authData with speculative token names the app may never populate, so
+      // the dump names credentials that do not exist. A custom app's authData
+      // is exactly its declared fields, so its dump is faithful.
+      if (
+        authType === 'session' &&
+        mappingIsEmpty &&
+        onDump &&
+        Object.keys(rendered).length > 0
+      ) {
+        onDump();
+      }
       if (placement === 'header' || placement === 'both') {
         const lowerHeaders = {};
         for (const [k, v] of Object.entries(req.headers)) {
@@ -162,9 +177,9 @@ const getLegacyOperationUrl = (compiledApp, typeOf, key) => {
 //
 // `requestFn` is called as `requestFn(request)` and should return a
 // response-shaped object.
-const buildLegacyScripting = (compiledApp, requestFn, cachedZap) => {
+const buildLegacyScripting = (compiledApp, requestFn, cachedZap, onDump) => {
   const Zap = cachedZap !== undefined ? cachedZap : loadLegacyZap(compiledApp);
-  const legacyBeforeRequest = createLegacyBeforeRequest(compiledApp);
+  const legacyBeforeRequest = createLegacyBeforeRequest(compiledApp, onDump);
 
   return {
     beforeRequest: legacyBeforeRequest,

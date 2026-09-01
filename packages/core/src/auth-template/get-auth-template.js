@@ -78,7 +78,14 @@ const hasAuthPlaceholders = (obj) => {
 // oauth2's access_token, etc.) aren't a strong "I expect this in the
 // request" signal — apps may use process.env exclusively and never
 // reference standard fields, which would be a false positive here.
-const supportedResult = (authType, source, template, auth) => {
+const supportedResult = (authType, source, template, auth, legacyDump) => {
+  // An empty legacy auth mapping dumps the whole credential set. Under capture
+  // those values are placeholders, so the template names credentials the app
+  // may never populate.
+  if (legacyDump) {
+    return { supported: false, reason: 'legacy_authdata_dump', authType };
+  }
+
   if (template && Object.keys(template).length > 0) {
     const s = JSON.stringify(template);
     const hasAuthData = /\{\{\s*bundle\.authData\./.test(s);
@@ -376,7 +383,7 @@ const extractTemplate = (req) => {
 };
 
 // Stub z object used for pipeline capture and test function survival.
-const createStubZ = (compiledApp, cachedZap) => {
+const createStubZ = (compiledApp, cachedZap, onDump) => {
   const Zap = cachedZap !== undefined ? cachedZap : loadLegacyZap(compiledApp);
 
   // Accepts both z.request shapes so a two-arg call isn't silently reduced to
@@ -397,6 +404,7 @@ const createStubZ = (compiledApp, cachedZap) => {
       compiledApp,
       (req, options) => stubZ.request(req, options),
       Zap,
+      onDump,
     ),
     request: stubRequest,
   };
@@ -468,7 +476,10 @@ const runMiddlewareSurvival = async (
     });
   };
 
-  const stubZ = createStubZ(compiledApp, cachedZap);
+  let legacyAuthDump = false;
+  const stubZ = createStubZ(compiledApp, cachedZap, () => {
+    legacyAuthDump = true;
+  });
   const syntheticBundle = {
     authData: placeholderAuthData,
     inputData: {},
@@ -506,7 +517,7 @@ const runMiddlewareSurvival = async (
     return { template: {} };
   }
 
-  return { template: extractTemplate(capturedReq) };
+  return { legacyAuthDump, template: extractTemplate(capturedReq) };
 };
 
 // Run placeholder authData through authentication.test (when it's a function).
@@ -553,7 +564,10 @@ const runTestFunctionSurvival = async (
     });
   };
 
-  const stubZ = createStubZ(compiledApp);
+  let legacyAuthDump = false;
+  const stubZ = createStubZ(compiledApp, undefined, () => {
+    legacyAuthDump = true;
+  });
   const syntheticBundle = {
     authData: placeholderAuthData,
     inputData: {},
@@ -606,7 +620,11 @@ const runTestFunctionSurvival = async (
     // accessing response.data.emails[0]) — that's fine, we already
     // have what we need.
     if (capturedReq) {
-      return { template: extractTemplate(capturedReq), requestMade: true };
+      return {
+        legacyAuthDump,
+        template: extractTemplate(capturedReq),
+        requestMade: true,
+      };
     }
     return { template: {}, requestMade: false, error: err.message };
   }
@@ -615,12 +633,19 @@ const runTestFunctionSurvival = async (
     return { template: {}, requestMade: false };
   }
 
-  return { template: extractTemplate(capturedReq), requestMade: true };
+  return {
+    legacyAuthDump,
+    template: extractTemplate(capturedReq),
+    requestMade: true,
+  };
 };
 
 // --- Main command handler ---
 
 const getAuthTemplate = async (compiledApp, input) => {
+  // Set by the legacy middleware when it writes the whole credential set
+  // because the auth mapping is empty. Any run that dumps taints the result.
+  let sawLegacyDump = false;
   const auth = compiledApp.authentication;
   const authType = auth ? auth.type : null;
 
@@ -691,12 +716,13 @@ const getAuthTemplate = async (compiledApp, input) => {
   // Run placeholder authData through the beforeRequest pipeline directly.
   // This captures auth injected by middleware (most common pattern).
   if (beforeRequest.length > 0) {
-    const { template, error } = await runMiddlewareSurvival(
+    const { template, error, legacyAuthDump } = await runMiddlewareSurvival(
       compiledApp,
       input,
       auth,
       placeholderAuthData,
     );
+    sawLegacyDump = sawLegacyDump || legacyAuthDump;
 
     if (error) {
       if (!auth.test) {
@@ -800,7 +826,7 @@ const getAuthTemplate = async (compiledApp, input) => {
   if (auth.test && typeof auth.test !== 'function') {
     const placeholderAuthData = buildPlaceholderAuthData(auth);
     const testReq = auth.test;
-    const { template, error } = await runMiddlewareSurvival(
+    const { template, error, legacyAuthDump } = await runMiddlewareSurvival(
       compiledApp,
       input,
       auth,
@@ -815,6 +841,7 @@ const getAuthTemplate = async (compiledApp, input) => {
         },
       },
     );
+    sawLegacyDump = sawLegacyDump || legacyAuthDump;
 
     if (error) {
       return {
@@ -893,6 +920,7 @@ const getAuthTemplate = async (compiledApp, input) => {
         'authentication.test',
         cleanTemplate(template),
         auth,
+        sawLegacyDump,
       );
     }
 
@@ -905,12 +933,14 @@ const getAuthTemplate = async (compiledApp, input) => {
 
   // --- Step 4: authentication.test is a function ---
   if (typeof auth.test === 'function') {
-    const { template, requestMade, error } = await runTestFunctionSurvival(
-      auth.test,
-      placeholderAuthData,
-      compiledApp,
-      input,
-    );
+    const { template, requestMade, error, legacyAuthDump } =
+      await runTestFunctionSurvival(
+        auth.test,
+        placeholderAuthData,
+        compiledApp,
+        input,
+      );
+    sawLegacyDump = sawLegacyDump || legacyAuthDump;
 
     if (error && !requestMade) {
       // Function crashed before making a request.
@@ -981,6 +1011,7 @@ const getAuthTemplate = async (compiledApp, input) => {
             'beforeRequest',
             beforeRequestTemplate,
             auth,
+            sawLegacyDump,
           );
         }
 
@@ -989,6 +1020,7 @@ const getAuthTemplate = async (compiledApp, input) => {
           'authentication.test',
           testTemplate,
           auth,
+          sawLegacyDump,
         );
       }
 
@@ -998,6 +1030,7 @@ const getAuthTemplate = async (compiledApp, input) => {
           'beforeRequest',
           beforeRequestTemplate,
           auth,
+          sawLegacyDump,
         );
       }
 
@@ -1017,6 +1050,7 @@ const getAuthTemplate = async (compiledApp, input) => {
       'beforeRequest',
       beforeRequestTemplate,
       auth,
+      sawLegacyDump,
     );
   }
 

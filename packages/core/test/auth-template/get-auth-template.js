@@ -1326,4 +1326,81 @@ describe('getAuthTemplate', () => {
       result.template.headers.should.not.have.property('content-length');
     });
   });
+  describe('legacy session auth with an empty auth mapping', () => {
+    // An empty legacy auth mapping makes the scripting middleware write the
+    // whole credential set into the request. Under capture those values are
+    // placeholders, so the template names credentials the app may never
+    // populate. UpkeepCLIAPI@1.3.0 is the production case.
+    const legacyBeforeRequest = (req, z, bundle) =>
+      z.legacyScripting.beforeRequest(req, z, bundle);
+
+    const sessionApp = (legacy) => ({
+      authentication: {
+        type: 'session',
+        test: STUB_TEST,
+        fields: [{ key: 'username' }, { key: 'password' }],
+      },
+      legacy,
+      beforeRequest: [legacyBeforeRequest],
+    });
+
+    it('returns legacy_authdata_dump for header placement', async () => {
+      const result = await run(
+        sessionApp({ authentication: { mapping: {}, placement: 'header' } }),
+      );
+      result.supported.should.be.false();
+      result.reason.should.eql('legacy_authdata_dump');
+    });
+
+    it('returns legacy_authdata_dump for querystring placement', async () => {
+      const result = await run(
+        sessionApp({
+          authentication: { mapping: {}, placement: 'querystring' },
+        }),
+      );
+      result.supported.should.be.false();
+      result.reason.should.eql('legacy_authdata_dump');
+    });
+
+    it('returns legacy_authdata_dump when legacy.authentication is absent', async () => {
+      const result = await run(sessionApp({}));
+      result.supported.should.be.false();
+      result.reason.should.eql('legacy_authdata_dump');
+    });
+
+    it('keeps a legacy session app that declares a real auth mapping', async () => {
+      const result = await run(
+        sessionApp({
+          authentication: {
+            mapping: { 'X-Api-Token': '{{token}}' },
+            placement: 'header',
+          },
+        }),
+      );
+      result.supported.should.be.true();
+      result.template.headers['X-Api-Token'].should.eql(
+        '{{bundle.authData.token}}',
+      );
+      result.template.headers.should.not.have.property('password');
+    });
+
+    it('keeps an app carrying a legacy block whose middleware never runs', async () => {
+      const result = await run({
+        authentication: {
+          type: 'session',
+          test: STUB_TEST,
+          fields: [{ key: 'username' }, { key: 'password' }],
+        },
+        legacy: { authentication: { mapping: {}, placement: 'header' } },
+        requestTemplate: {
+          headers: {
+            username: '{{bundle.authData.username}}',
+            password: '{{bundle.authData.password}}',
+          },
+        },
+      });
+      result.supported.should.be.true();
+      result.source.should.eql('requestTemplate');
+    });
+  });
 });
